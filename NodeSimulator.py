@@ -6,6 +6,9 @@ Designed to be run on a seperate Pi with a linked GPIO pin and UART
 For more info see www.CognIot.eu
 '''
 
+# setup the serial port
+# respond to setup of LoRa comms
+# respond to the normal commands
 
 
 

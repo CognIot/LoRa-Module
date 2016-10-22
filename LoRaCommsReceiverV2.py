@@ -80,6 +80,11 @@ class LoRaComms:
                     return data['reply']
         return b''
     
+    def exit_comms(self):
+        # This routine is called on the exit of the main program
+        GPIO.cleanup()
+        self.fd.close()
+        return
 
     ## The functions below here are for internal use within the class only
     
@@ -271,5 +276,6 @@ class LoRaComms:
 if __name__ == "__main__":
     # Do something!
     print("doing something")
-    return
+
+
 
