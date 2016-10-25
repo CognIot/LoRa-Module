@@ -2,7 +2,9 @@
 """
 This program is used to listen to the LoRa transmissions
 
-It is intended to be used as part of the LoRa Monitor, but it can be run independently.
+It is intended to be used as part of the LoRa Monitor.
+
+There are hooks for testing purposes defined, see below
 
 """
 
@@ -37,6 +39,7 @@ class LoRaComms:
     This class handles all the comms, it is not ELB specific
     
     Any data passed in or out needs to be in binary format
+
     '''
     
     def __init__(self):
@@ -69,7 +72,6 @@ class LoRaComms:
         # Receive data on the comms port and return it to the calling program
         # NOTE: It can return zero bytes if there is no data to read
 
-        # TODO: Do I wait for the data pin to be high and the data length to be greater than zero??
         _wait_for_gpio()
         length = _get_data_length()
         if length > 0:
@@ -85,7 +87,7 @@ class LoRaComms:
         GPIO.cleanup()
         self.fd.close()
         return
-
+        
     ## The functions below here are for internal use within the class only
     
     def _write_to_sp(self, data_to_transmit):
@@ -271,6 +273,7 @@ class LoRaComms:
         _led_error()
         return
 
+    
 
 # Only call the independent routine if the module is being called directly, else it is handled by the calling program
 if __name__ == "__main__":
