@@ -269,6 +269,8 @@ class LoRaComms:
                 time.sleep(SRDELAY)
                 # No need to check the reply as it has already been validated
                 reply = self._read_from_sp()            #TODO: Work out the right length
+
+#BUG: Can't use this check response as the reply is <5 most of the time.
                 working = self._check_lora_response(reply)
             else:
                 logging.warning("[LCR]: Failed to Send Config Command %s" % command)
