@@ -75,8 +75,20 @@ def ns_setup_uart():
                             bytesize=serial.EIGHTBITS,
                             timeout=0.1)
     except:
-        logging.critical("[SIM]: Unable to Setup communications")
-        sys.exit()
+        logging.critical("[SIM]: Unable to Setup communications on Serial0, trying ttyAMA0")
+        ser = ''
+        
+    if ser =='':
+        try:
+            ser = serial.Serial('/dev/serial0',
+                                baudrate=57600,
+                                parity=serial.PARITY_NONE,
+                                stopbits=serial.STOPBITS_ONE,
+                                bytesize=serial.EIGHTBITS,
+                                timeout=0.1)
+        except:
+            logging.critical("[SIM]: Unable to Setup communications on ttyAMA0")
+            sys.exit()
 
     time.sleep(INTERDELAY)
 

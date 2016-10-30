@@ -21,7 +21,7 @@ import LoRaCommsReceiverV2 as LCR_V2
 def main():
     # Main function to be run to manage the test routines.
     
-    # This progrm
+    # This program
     loras = {}
     # The command below will instigate comms
     lora = LCR_V2.LoRaComms()
