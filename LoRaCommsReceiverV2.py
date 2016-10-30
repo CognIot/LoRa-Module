@@ -25,6 +25,21 @@ INPUT_PIN = 17
 # This is measured in seconds
 COMMS_TIMEOUT = 2
 
+# The delay between send and receive of data using the UART to the LoRa module
+# This is not a delay between messages, but the UART level comms
+SRDELAY = 0.01
+
+# The delay between receiving one message via the LoRa module and sending the next message
+# Typically used when configuring the LoRa module
+INTERDELAY = 0.02
+
+# The delay applied after a failed message has been received. This could be either a
+# fail to send or a failed response
+FAILDELAY = 0.03
+
+# The pin which has the LED connected
+LED_PIN = 23
+
 # LoRa Commands
 SENDB = b'AT+X'                     # Send a stream of n bytes long
 REC_LEN = b'AT+r'                   # Return the received length of data
@@ -44,9 +59,9 @@ class LoRaComms:
     
     def __init__(self):
         # initialise the comms for the module
-        self.fd = _setup_uart()
-        _setup_gpio()
-        _setup_lora()
+        self.fd = self._setup_uart()
+        self._setup_gpio()
+        self._setup_lora()
         
     def transmit(self, message):
         # Send data out on the comms port
@@ -60,11 +75,11 @@ class LoRaComms:
         # Message to send is AT+X plus a space plus the length in 2 char hex, all encoded in binary string format
         reply = _write_to_sp(SENDB + ' ' + format(len(message), '02X').encode('utf-8'))
         if reply > 0:
-            reply = _read_from_sp()
+            reply = self._read_from_sp()
             if _check_for_dollar(reply):
-                if _write_to_sp(message) > 0:
-                    reply = _read_from_sp()
-                    if _check_lora_response(reply):
+                if self._write_to_sp(message) > 0:
+                    reply = self._read_from_sp()
+                    if self._check_lora_response(reply):
                         return True
         return False    
         
@@ -72,12 +87,12 @@ class LoRaComms:
         # Receive data on the comms port and return it to the calling program
         # NOTE: It can return zero bytes if there is no data to read
 
-        _wait_for_gpio()
-        length = _get_data_length()
+        self._wait_for_gpio()
+        length = self._get_data_length()
         if length > 0:
-            reply = _read_from_sp(length)
-            if _check_lora_response(reply):
-                data = _strip_out_data(reply, length)
+            reply = self._read_from_sp(length)
+            if self._check_lora_response(reply):
+                data = self._strip_out_data(reply, length)
                 if data['success']:
                     return data['reply']
         return b''
@@ -100,7 +115,7 @@ class LoRaComms:
             logging.info("[LCR]: Message >%s< written to LoRa module and got response :%s" % (data_to_transmit, ans))
         except Exception as e:
             logging.warning("[LCR]: Message >%s< sent as >%a< FAILED" % (data_to_transmit, send))
-            _led_error()
+            self._led_error()
             ans = 0
         return ans
     
@@ -115,7 +130,7 @@ class LoRaComms:
         except:
             logging.warning("[LCR]: Reading of data on the serial port FAILED")
             reply = b''
-            _led_error()
+            self._led_error()
 
         logging.debug("[LCR]: Data read back from the serial port :%s" % reply)
         return reply
@@ -192,17 +207,17 @@ class LoRaComms:
     def _setup_lora(self):
         # Setup the LoRa module configuration
         logging.info("[LCR]: Setting up the LoRA module with the various commands")
-        _lora_module_wakeup()
+        self._lora_module_wakeup()
     
-        _send_config_command(RESET)
+        self._send_config_command(RESET)
         time.sleep(INTERDELAY)
         time.sleep(INTERDELAY)
     
-        _send_config_command(VERSION)
+        self._send_config_command(VERSION)
         time.sleep(INTERDELAY)
-        _send_config_command(SLORAMODE_ONE)
+        self._send_config_command(SLORAMODE_ONE)
         time.sleep(INTERDELAY)
-        _send_config_command(GLORA)
+        self._send_config_command(GLORA)
         return
 
     def _wait_for_gpio(self):
@@ -220,10 +235,10 @@ class LoRaComms:
         # Send the REC_LEN (AT+r) and decode the response to get the length of the data
         # return the length, or zero on fail
         length = 0
-        if _write_to_sp(REC_LEN) > 0:
+        if self._write_to_sp(REC_LEN) > 0:
             # Expect to get 'xx\r\nOK00>' where xx is the length byte
-            reply = _read_from_sp(9)
-            if _check_lora_response(reply):
+            reply = self._read_from_sp(9)
+            if self._check_lora_response(reply):
                 length = int(reply[0:2], 16)
         return length
     
@@ -249,28 +264,28 @@ class LoRaComms:
         working = False
         starttime = time.time()
         while (starttime + COMMS_TIMEOUT > time.time()) and working == False:
-            ans = _write_to_sp(command)
+            ans = self._write_to_sp(command)
             if ans >0:
                 time.sleep(SRDELAY)
                 # No need to check the reply as it has already been validated
-                reply = _read_from_sp(length)
-                working = _check_lora_response(reply)
+                reply = self._read_from_sp()            #TODO: Work out the right length
+                working = self._check_lora_response(reply)
             else:
                 logging.warning("[LCR]: Failed to Send Config Command %s" % command)
-                _led_error()
+                self._led_error()
         return
     
-    def _send_config_command(command):
+    def _send_config_command(self, command):
         # This function sends data and gets the reply for the various configuration commands.
-        ans = _write_to_sp(command)
+        ans = self._write_to_sp(command)
         if ans > 0:
             #time.sleep(SRDELAY)
-            reply = _read_from_sp(length)
-            if _check_lora_response(reply):
+            reply = self._read_from_sp()            #TODO: Need to understand length
+            if self._check_lora_response(reply):
                 logging.debug("[LCR]: Sent Config Command successfully: %s" % command)
                 return
         logging.warning("[LCR]: Failed to Send Config Command %s" % command)
-        _led_error()
+        self._led_error()
         return
 
     

@@ -10,6 +10,7 @@ Functionality.
 
 '''
 
+import logging
 import LoRaCommsReceiverV2 as LCR_V2
 
 # setup the serial port
@@ -32,5 +33,5 @@ if __name__ == '__main__':
     logging.basicConfig(filename="LoRaComms_Test.txt", filemode="w", level=logging.DEBUG,
                         format='%(asctime)s:%(levelname)s:%(message)s')
 
-	main()
+    main()
 

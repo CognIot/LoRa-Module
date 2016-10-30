@@ -21,7 +21,9 @@ The LoRaComms class can opoerate in test mode:
 This operates at the lowest level possible, without actual comms down the serial port.
 
 It is not implemented at this time - this version runs on a separate Pi.
+
 '''
+#TODO: Handle the LED
 
 import serial
 import logging
@@ -77,10 +79,10 @@ def ns_setup_uart():
     except:
         logging.critical("[SIM]: Unable to Setup communications on Serial0, trying ttyAMA0")
         ser = ''
-        
+
     if ser =='':
         try:
-            ser = serial.Serial('/dev/serial0',
+            ser = serial.Serial('/dev/ttyAMA0',
                                 baudrate=57600,
                                 parity=serial.PARITY_NONE,
                                 stopbits=serial.STOPBITS_ONE,
@@ -140,7 +142,7 @@ def build_command(cmd):
 #BUG: The built string is incorrect, need to check what is actually sent from the log files
 
     return expected
-        
+
 def ns_wake_up(fd):
     # Handle the wakeup sequence
     # LCR sends \n repeatably until a psoitive response
@@ -151,16 +153,16 @@ def ns_wake_up(fd):
     while reply != b'\n':
         reply = ns_get_sent(fd)
     logging.debug("[SIM]: Seen the first \\n sent")
-    
+
     # Wait for a random period of time
     starttime = time.timer() + boot_time
     while time.timer() < starttime:
         time.sleep(0.001)
     logging.debug("[SIM]: Waited for a random time: %s mS" % boot_time)
-    
+
     # reply with positive response
     ns_send_back(fd, positive_response())
-    
+
     return
 
 def ns_handle_config_cmd(fd, cmd):
@@ -171,17 +173,17 @@ def ns_handle_config_cmd(fd, cmd):
     while reply != build_command(cmd):
         reply = ns_get_sent(fd)
     logging.debug("[SIM]: Seen the %s command" % cmd)
-    
+
     # Wait for a random period of time
     starttime = time.timer() + reset_time
     while time.timer() < starttime:
         time.sleep(0.001)
     logging.debug("[SIM]: Waited for a random time: %s mS" % reset_time)
-    
+
     # reply with positive response
     ns_send_back(fd, positive_response())
     return
-    
+
 def ns_setup_lora(fd):
     # Handle the setup commands expected for a module.
     # Expected command sequence
@@ -203,13 +205,13 @@ def main():
     # Main function to be run to manage the test routines.
     port = ns_setup_uart()
     ns_setup_gpio()
-    
+
     ns_wake_up(port)
     ns_setup_lora(port)
 
     #TODO: From this point, the command beig received could be one of many and therefore
     #       needs to be in a loop similar to the main program
-    
+
     return
 
 
