@@ -111,11 +111,14 @@ def ns_get_sent(fd):
     while len(reply) < 1:
         try:
             reply = fd.readall()
+
+#BUG: I think this is returing all the data in 1 shot and not the first slash n.
+#       Could it be the readall is waiting too long, or the data sent is sent too quick.
         except:
             logging.warning("[SIM]: Reading of data on the serial port FAILED")
             reply = b''
 
-    logging.debug("[SIM]: Data sent over the serial port :%s" % reply)
+    logging.debug("[SIM]: Data received over the serial port :%s" % reply)
     return reply
 
 def ns_send_back(fd, send):
@@ -151,6 +154,7 @@ def ns_wake_up(fd):
     # Wait for first \n
     logging.debug("[SIM]: Waiting for the first \\n sent")
     while reply != b'\n':
+        print("reply:%s" % reply)
         reply = ns_get_sent(fd)
     logging.debug("[SIM]: Seen the first \\n sent")
 
