@@ -21,7 +21,7 @@ import LoRaCommsReceiverV2 as LCR_V2
 
 def main():
     # Main function to be run to manage the test routines.
-    
+
     # This program
     loras = {}
     # The command below will instigate comms
@@ -35,12 +35,13 @@ if __name__ == '__main__':
 
     import serial
     import time
-    
+
+    '''
     port = serial.Serial("/dev/serial0", baudrate=57600, timeout=3.0)
     while True:
         port.write(b'\r\nSay something')
         time.sleep(1)
         print("Sent")
-        
+    '''
     main()
 
