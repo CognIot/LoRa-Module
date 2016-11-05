@@ -180,8 +180,9 @@ class LoRaComms:
                                 stopbits=serial.STOPBITS_ONE,
                                 bytesize=serial.EIGHTBITS,
                                 timeout=0.1)
-        logging.critical("[SIM]: Unable to Setup communications on Serial0, trying ttyAMA0")
-        ser = ''
+        except:
+            logging.critical("[SIM]: Unable to Setup communications on Serial0, trying ttyAMA0")
+            ser = ''
 
         if ser =='':
             try:
