@@ -153,18 +153,23 @@ def ns_get_packet(fd):
     
     while all_data == False:
         # Get the data from the serial port
-        try:
+        #try:
+            #reply = fd.read(1)
+            #logging.debug("[SIM]: Got a byte of data:%s" % reply)
+        #except:
+            #logging.debug("[SIM]: NO data returned on the serial port")
+            #reply = b''
+        if fd.inWaiting() > 0:
             reply = fd.read(1)
             logging.debug("[SIM]: Got a byte of data:%s" % reply)
-        except:
-            logging.debug("[SIM]: NO data returned on the serial port")
-            reply = b''
+        else:
+            reply =b''
         # Check if there is anything
         if len(reply) > 0:
             # Set first_byte time if not set
             if first_byte_time == 0:
                 first_byte_time = time.time()
-                logging.debug("[SIM]: Seen the first byte at time: %S" % time.strftime("%H:%M:%S", time.localtime(first_byte_time)))
+                logging.debug("[SIM]: Seen the first byte at time: %s" % time.strftime("%H:%M:%S", time.localtime(first_byte_time)))
                 #           Formatted the time in seconds to a HH:MM:SS
             packet = packet + reply
             reply = b''                 # Reset for the next byte
@@ -227,7 +232,8 @@ def ns_handle_config_cmd(fd, cmd):
     reset_time = random.randint(0,2000) / 1000       # set the wait time, in mS
     reply = b''
     logging.debug("[SIM]: Waiting for the %s command" % cmd)
-    while reply != build_command(cmd):
+#    while reply != build_command(cmd):
+    while build_command(cmd) not in reply:
         #reply = ns_get_sent(fd)
         #reply = reply + ns_get_byte_sent(fd)
         reply = ns_get_packet(fd)
@@ -237,7 +243,7 @@ def ns_handle_config_cmd(fd, cmd):
     starttime = time.time() + reset_time
     while time.time() < starttime:
         time.sleep(0.001)
-    logging.debug("[SIM]: Waited for a random time: %s mS" % reset_time)
+    logging.debug("[SIM]: Waited for a random time: %s S" % reset_time)
 
     # reply with positive response
     ns_send_back(fd, positive_response())

@@ -33,6 +33,10 @@ SRDELAY = 0.01
 # Typically used when configuring the LoRa module
 INTERDELAY = 2.02
 
+# The timeout between sending a message to the LoRa and waiting for a response from it
+# This is not the time for radio comms, but typically for the OK00 from the LoRa module
+LORA_TIMEOUT = 0.5
+
 # The delay applied after a failed message has been received. This could be either a
 # fail to send or a failed response
 FAILDELAY = 0.03
@@ -125,8 +129,16 @@ class LoRaComms:
     def _read_from_sp(self, length=-1):
         # Read data from the serial port, using length if given
         # return the data, length of zero if nothing of failed
+        
+#BUG: There is a timeout issue here as it is returning before the response si ready.
+#       Need to add some sort of capability to handle this or do I simply expand the time allowed for the 
+#       serial comms to return, it is currently 0.1 seconds.
+#       IN the test routine I use isWaiting to check for data first, maybe I should also use it here.
+
+        # Modified the serial setup to extend the dealy for upto LORA_TIMEOUT time to allow for a slow response
         try:
             if length == -1:
+                #TODO: Possibly use the inWaiting capability rather than readall
                 reply = self.fd.readall()
             else:
                 reply = self.fd.read(length)
@@ -179,7 +191,7 @@ class LoRaComms:
                                 parity=serial.PARITY_NONE,
                                 stopbits=serial.STOPBITS_ONE,
                                 bytesize=serial.EIGHTBITS,
-                                timeout=0.1)
+                                timeout=LORA_TIMEOUT)
         except:
             logging.critical("[SIM]: Unable to Setup communications on Serial0, trying ttyAMA0")
             ser = ''
@@ -191,7 +203,7 @@ class LoRaComms:
                                     parity=serial.PARITY_NONE,
                                     stopbits=serial.STOPBITS_ONE,
                                     bytesize=serial.EIGHTBITS,
-                                    timeout=0.1)
+                                    timeout=LORA_TIMEOUT)
             except:
                 logging.critical("[SIM]: Unable to Setup communications on ttyAMA0")
                 sys.exit()
