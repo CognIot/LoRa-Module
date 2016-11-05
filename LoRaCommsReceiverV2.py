@@ -41,6 +41,9 @@ LORA_TIMEOUT = 0.5
 # fail to send or a failed response
 FAILDELAY = 0.03
 
+# The retry count is how many times it is going to send the command to retry it.
+RETRY_COUNT = 3
+
 # The pin which has the LED connected
 LED_PIN = 23
 
@@ -129,13 +132,7 @@ class LoRaComms:
     def _read_from_sp(self, length=-1):
         # Read data from the serial port, using length if given
         # return the data, length of zero if nothing of failed
-        
-#BUG: There is a timeout issue here as it is returning before the response si ready.
-#       Need to add some sort of capability to handle this or do I simply expand the time allowed for the 
-#       serial comms to return, it is currently 0.1 seconds.
-#       IN the test routine I use isWaiting to check for data first, maybe I should also use it here.
-
-        # Modified the serial setup to extend the dealy for upto LORA_TIMEOUT time to allow for a slow response
+        # Modified the serial setup to extend the delay for upto LORA_TIMEOUT time to allow for a slow response
         try:
             if length == -1:
                 #TODO: Possibly use the inWaiting capability rather than readall
@@ -235,7 +232,8 @@ class LoRaComms:
         # Setup the LoRa module configuration
         logging.info("[LCR]: Setting up the LoRA module with the various commands")
         self._lora_module_wakeup()
-
+        time.sleep(INTERDELAY)
+        
         self._send_config_command(RESET)
         time.sleep(INTERDELAY)
         time.sleep(INTERDELAY)
@@ -314,17 +312,21 @@ class LoRaComms:
 
     def _send_config_command(self, command):
         # This function sends data and gets the reply for the various configuration commands.
-        ans = self._write_to_sp(command)
-        if ans > 0:
-            time.sleep(SRDELAY)
-            reply = self._read_from_sp()            #TODO: Need to understand length
-            if self._check_lora_response(reply):
-                logging.debug("[LCR]: Sent Config Command successfully: %s" % command)
-                return
-        logging.warning("[LCR]: Failed to Send Config Command %s" % command)
-        self._led_error()
+        # Tries for the RETRY_COUNT times before returning.
+        tries = RETRY_COUNT
+        while tries > 0: 
+            ans = self._write_to_sp(command)
+            if ans > 0:
+                time.sleep(SRDELAY)
+                reply = self._read_from_sp()            #TODO: Need to understand length
+                if self._check_lora_response(reply):
+                    logging.debug("[LCR]: Sent Config Command successfully: %s" % command)
+                    break
+            else:
+                logging.warning("[LCR]: Failed to Send Config Command %s" % command)
+                self._led_error()
+            tries = tries - 1
         return
-
 
 
 # Only call the independent routine if the module is being called directly, else it is handled by the calling program

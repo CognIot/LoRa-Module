@@ -65,6 +65,17 @@ def ns_setup_gpio():
     logging.debug("[SIM]: GPIO Setup Complete")
     return
 
+def set_gpio(state):
+    # Set the GPIO pin to the required state.
+    GPIO.output(INPUT_PIN, state)
+    return
+    
+def reset_gpio():
+    # Reset the GPIO pin back to the normal level after a time period.
+    time.sleep(0.25)
+    set_gpio(False)
+    return
+
 def ns_setup_uart():
     """
     Setup the UART for communications and return an object referencing it. Does:-
@@ -191,6 +202,19 @@ def ns_send_back(fd, send):
         ans = 0
     return ans
 
+def ns_send_back_gpio(fd, send):
+    # Send the data given back over the UART
+    # Set the GPIO pin high afterwards
+    set_gpio(False)
+    try:
+        ans = fd.write(send)
+        logging.info("[SIM]: Message >%s< written to LoRa module and got response :%s" % (send, ans))
+    except Exception as e:
+        logging.warning("[SIM]: Message >%s< sent FAILED" % (send))
+        ans = 0
+    set_gpio(True)
+    return ans
+    
 def positive_response():
     # Construct a positive response
     pos_rsp = b'\n\rOK00>'
@@ -229,7 +253,7 @@ def ns_wake_up(fd):
 
 def ns_handle_config_cmd(fd, cmd):
     # Handle the reset command that is received.
-    reset_time = random.randint(0,2000) / 1000       # set the wait time, in mS
+    reset_time = random.randint(0,500) / 1000       # set the wait time, in mS
     reply = b''
     logging.debug("[SIM]: Waiting for the %s command" % cmd)
 #    while reply != build_command(cmd):
@@ -253,18 +277,22 @@ def ns_setup_lora(fd):
     # Handle the setup commands expected for a module.
     # Expected command sequence
     ns_wake_up(fd)
+    
+    #TODO: Need to handle repeats of the commands, build something similar to the decode routine in HubDataDecoder
     ns_handle_config_cmd(fd,NS_RESET)
     ns_handle_config_cmd(fd,NS_VERSION)
     ns_handle_config_cmd(fd,NS_SLORAMODE_ONE)
     ns_handle_config_cmd(fd,NS_GLORA)
     return
 
-def responses(fd):
-    # Main routine to handle incoming messages and respond accordingly.
-    while(True):
-        msg = ns_get_sent(fd)
-        #TODO: Add command decoding here
-    return
+def ns_reply_with_sent(fd):
+    # Read what has been received and send it straight back.
+    
+    while True:
+        ns_received = ns_get_packet(fd)
+        time.sleep(random.randint(0,500) / 1000)
+        ns_send_back_gpio(fd, ns_received)
+        reset_gpio()
 
 def main():
     # Main function to be run to manage the test routines.
@@ -273,8 +301,10 @@ def main():
 
     ns_setup_lora(port)
 
-    #TODO: From this point, the command beig received could be one of many and therefore
-    #       needs to be in a loop similar to the main program
+    #From this point, the command being received could be one of many and therefore it is simply sent
+    # back after a random time
+    
+    ns_reply_with_sent(port)
 
     return
 
