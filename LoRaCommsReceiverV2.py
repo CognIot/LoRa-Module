@@ -52,21 +52,21 @@ class LoRaComms:
     '''
     Class to handle all communicaitons with the LoRa module
     This class handles all the comms, it is not ELB specific
-    
+
     Any data passed in or out needs to be in binary format
 
     '''
-    
+
     def __init__(self):
         # initialise the comms for the module
         self.fd = self._setup_uart()
         self._setup_gpio()
         self._setup_lora()
-        
+
     def transmit(self, message):
         # Send data out on the comms port
         # Returns True if successful or Flase if not
-        
+
         if len(message) > 255:
             # Length is greater than 255, abort.
             logging.critical("[LCR]: Radio Message length is greater than 255 limit, aborting: %s" % message)
@@ -81,8 +81,8 @@ class LoRaComms:
                     reply = self._read_from_sp()
                     if self._check_lora_response(reply):
                         return True
-        return False    
-        
+        return False
+
     def receive(self):
         # Receive data on the comms port and return it to the calling program
         # NOTE: It can return zero bytes if there is no data to read
@@ -96,23 +96,23 @@ class LoRaComms:
                 if data['success']:
                     return data['reply']
         return b''
-    
+
     def exit_comms(self):
         # This routine is called on the exit of the main program
         GPIO.cleanup()
         self.fd.close()
         return
-        
+
     ## The functions below here are for internal use within the class only
-    
+
     def _write_to_sp(self, data_to_transmit):
         # Write the given data to the serial port
         # Returns the data length or 0 if failed
         # add the control characters
         send = data_to_transmit + b'\r\n'
-        
+
         print("Data To Send:%s" % send)     #Additonal Debug
-        
+
         try:
             ans = self.fd.write(send)
             logging.info("[LCR]: Message >%s< written to LoRa module and got response :%s" % (data_to_transmit, ans))
@@ -121,7 +121,7 @@ class LoRaComms:
             self._led_error()
             ans = 0
         return ans
-    
+
     def _read_from_sp(self, length=-1):
         # Read data from the serial port, using length if given
         # return the data, length of zero if nothing of failed
@@ -137,11 +137,11 @@ class LoRaComms:
 
         logging.debug("[LCR]: Data read back from the serial port :%s" % reply)
         return reply
-        
+
     def _led_error(self):
         # Flash the LED for an error state
         return
-        
+
     def _check_for_dollar(self, receive):
         # Given the response, check for the $
         # A positive response is b'\r\n$'
@@ -158,14 +158,14 @@ class LoRaComms:
         if len(receive) < response_posn:
             logging.warning("[LCR]: Length of response received is too short:%s" % receive)
             return False
-    
+
         if b'OK00' in receive[len(receive) - response_posn:]:
             return True
         else:
             response = receive[len(receive) - response_posn:]
             logging.warning("[LCR]: Negative response received from the LoRa module:%s" % response)
             return False
-    
+
     def _setup_uart(self):
         """
         Setup the UART for communications and return an object referencing it. Does:-
@@ -174,21 +174,33 @@ class LoRaComms:
         -Checks all is ok and returns the object
         """
         try:
-            ser = serial.Serial('/dev/serial0', 
-                                baudrate=57600, 
+            ser = serial.Serial('/dev/serial0',
+                                baudrate=57600,
                                 parity=serial.PARITY_NONE,
-                                stopbits=serial.STOPBITS_ONE, 
-                                bytesize=serial.EIGHTBITS, 
+                                stopbits=serial.STOPBITS_ONE,
+                                bytesize=serial.EIGHTBITS,
                                 timeout=0.1)
         except:
-            logging.critical("[LCR]: Unable to Setup communications")
-            sys.exit()
-    
+            logging.critical("[SIM]: Unable to Setup communications on Serial0, trying ttyAMA0")
+            ser = ''
+
+        if ser =='':
+            try:
+                ser = serial.Serial('/dev/ttyAMA0',
+                                    baudrate=57600,
+                                    parity=serial.PARITY_NONE,
+                                    stopbits=serial.STOPBITS_ONE,
+                                    bytesize=serial.EIGHTBITS,
+                                    timeout=0.1)
+            except:
+                logging.critical("[SIM]: Unable to Setup communications on ttyAMA0")
+                sys.exit()
+
         time.sleep(INTERDELAY)
-    
+
         # clear the serial buffer of any left over data
         ser.flushInput()
-    
+
         if ser.isOpen():
             # if serial comms are setup and the channel is opened
             logging.info ("[LCR]: PI UART setup complete on channel %d as : %s" % (ser.fd, ser.getSettingsDict))
@@ -211,11 +223,11 @@ class LoRaComms:
         # Setup the LoRa module configuration
         logging.info("[LCR]: Setting up the LoRA module with the various commands")
         self._lora_module_wakeup()
-    
+
         self._send_config_command(RESET)
         time.sleep(INTERDELAY)
         time.sleep(INTERDELAY)
-    
+
         self._send_config_command(VERSION)
         time.sleep(INTERDELAY)
         self._send_config_command(SLORAMODE_ONE)
@@ -227,13 +239,13 @@ class LoRaComms:
         # Routine monitors the GPIO pin and waits for the line to go high indicating a packet.
         logging.debug("[LCR]: Waiting for data pin to go high")
         logging.info(" ")       # Add blank line for readability of the log file
-    
+
         status = 0
         while(status!=1):
             status = GPIO.input(INPUT_PIN)
         logging.debug("[LCR]: Data Pin gone high at time :%s" % time.strftime("%d-%m-%y %H:%M:%S"))
         return
-    
+
     def _get_data_length(self):
         # Send the REC_LEN (AT+r) and decode the response to get the length of the data
         # return the length, or zero on fail
@@ -244,7 +256,7 @@ class LoRaComms:
             if self._check_lora_response(reply):
                 length = int(reply[0:2], 16)
         return length
-    
+
     def _strip_out_data(self, message, length):
         # given the message of data, strip out the data and return it
         # Returns a dictionary of the True / False and the stripped out data
@@ -275,7 +287,7 @@ class LoRaComms:
                 self._led_error()
                 ans = 0
 #            ans = self._write_to_sp(command)
-            
+
             if ans > 0:
                 time.sleep(SRDELAY)
                 # No need to check the reply as it has already been validated
@@ -287,7 +299,7 @@ class LoRaComms:
                 logging.warning("[LCR]: Failed to Send Config Command %s" % command)
                 self._led_error()
         return
-    
+
     def _send_config_command(self, command):
         # This function sends data and gets the reply for the various configuration commands.
         ans = self._write_to_sp(command)
@@ -301,7 +313,7 @@ class LoRaComms:
         self._led_error()
         return
 
-    
+
 
 # Only call the independent routine if the module is being called directly, else it is handled by the calling program
 if __name__ == "__main__":
