@@ -23,7 +23,7 @@ INPUT_PIN = 17
 
 # During processing of LoRa messages, there is a timeout to determine if the message is old
 # This is measured in seconds
-COMMS_TIMEOUT = 2
+COMMS_TIMEOUT = 20
 
 # The delay between send and receive of data using the UART to the LoRa module
 # This is not a delay between messages, but the UART level comms
@@ -31,7 +31,7 @@ SRDELAY = 0.01
 
 # The delay between receiving one message via the LoRa module and sending the next message
 # Typically used when configuring the LoRa module
-INTERDELAY = 0.02
+INTERDELAY = 2.02
 
 # The delay applied after a failed message has been received. This could be either a
 # fail to send or a failed response
@@ -110,6 +110,9 @@ class LoRaComms:
         # Returns the data length or 0 if failed
         # add the control characters
         send = data_to_transmit + b'\r\n'
+        
+        print("Data To Send:%s" % send)     #Additonal Debug
+        
         try:
             ans = self.fd.write(send)
             logging.info("[LCR]: Message >%s< written to LoRa module and got response :%s" % (data_to_transmit, ans))
@@ -156,7 +159,7 @@ class LoRaComms:
             logging.warning("[LCR]: Length of response received is too short:%s" % receive)
             return False
     
-        if b'OK00' in receive[len(receive) - reponse_posn:]:
+        if b'OK00' in receive[len(receive) - response_posn:]:
             return True
         else:
             response = receive[len(receive) - response_posn:]
@@ -264,8 +267,16 @@ class LoRaComms:
         working = False
         starttime = time.time()
         while (starttime + COMMS_TIMEOUT > time.time()) and working == False:
-            ans = self._write_to_sp(command)
-            if ans >0:
+            try:
+                ans = self.fd.write(command)
+                logging.info("[LCR]: Wake-up message >%s< written to LoRa module and got response :%s" % (command, ans))
+            except Exception as e:
+                logging.warning("[LCR]: Wake-up message >%s< sent FAILED" % (command))
+                self._led_error()
+                ans = 0
+#            ans = self._write_to_sp(command)
+            
+            if ans > 0:
                 time.sleep(SRDELAY)
                 # No need to check the reply as it has already been validated
                 reply = self._read_from_sp()            #TODO: Work out the right length
@@ -281,7 +292,7 @@ class LoRaComms:
         # This function sends data and gets the reply for the various configuration commands.
         ans = self._write_to_sp(command)
         if ans > 0:
-            #time.sleep(SRDELAY)
+            time.sleep(SRDELAY)
             reply = self._read_from_sp()            #TODO: Need to understand length
             if self._check_lora_response(reply):
                 logging.debug("[LCR]: Sent Config Command successfully: %s" % command)

@@ -33,5 +33,14 @@ if __name__ == '__main__':
     logging.basicConfig(filename="LoRaComms_Test.txt", filemode="w", level=logging.DEBUG,
                         format='%(asctime)s:%(levelname)s:%(message)s')
 
+    import serial
+    import time
+    
+    port = serial.Serial("/dev/serial0", baudrate=57600, timeout=3.0)
+    while True:
+        port.write(b'\r\nSay something')
+        time.sleep(1)
+        print("Sent")
+        
     main()
 
