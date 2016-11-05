@@ -60,8 +60,8 @@ def ns_setup_gpio():
     GPIO.setwarnings(False)
     GPIO.setmode(GPIO.BCM)
     time.sleep(0.2)
-    GPIO.setup(INPUT_PIN, GPIO.IN)
-    GPIO.setup(LED_PIN, GPIO.OUT)
+    GPIO.setup(INPUT_PIN, GPIO.OUT)         # Set opposite to the LoRa Comms module
+    GPIO.setup(LED_PIN, GPIO.IN)            #   --""--     --""--    --""--
     logging.debug("[SIM]: GPIO Setup Complete")
     return
 
@@ -285,13 +285,29 @@ def ns_setup_lora(fd):
     ns_handle_config_cmd(fd,NS_GLORA)
     return
 
+def ns_get_length(fd):
+    # Receive and decode the length data from the message)
+    packet = ns_get_packet(fd)
+    # Expected response is AT+X len
+    if b'AT+X' in packet:
+        length = packet[5:6]
+        length = int(length)
+    else:
+        lenth = 0
+    
+    return length
+
 def ns_reply_with_sent(fd):
     # Read what has been received and send it straight back.
     
     while True:
-        ns_received = ns_get_packet(fd)
-        time.sleep(random.randint(0,500) / 1000)
-        ns_send_back_gpio(fd, ns_received)
+        # Process to expect
+        length_of_msg = ns_get_length(fd)       #   AT+X len
+        if length_of_message > 0:
+            ns_send_back(fd, b'$')              #   return $
+            ns_received = ns_get_packet(fd)     #   Get message
+            time.sleep(random.randint(0,500) / 1000)
+            ns_send_back_gpio(fd, ns_received)
         reset_gpio()
 
 def main():

@@ -4,8 +4,11 @@ This program is used to listen to the LoRa transmissions
 
 It is intended to be used as part of the LoRa Monitor.
 
-There are hooks for testing purposes defined, see below
-
+User funcitons are
+initialise
+transmit(message to send)   sends the message to send
+receive                     returns message received
+exitcomms                   closes comms
 """
 
 import serial
@@ -80,10 +83,10 @@ class LoRaComms:
             return False
 
         # Message to send is AT+X plus a space plus the length in 2 char hex, all encoded in binary string format
-        reply = _write_to_sp(SENDB + ' ' + format(len(message), '02X').encode('utf-8'))
+        reply = self._write_to_sp(SENDB + b' ' + format(len(message), '02X').encode('utf-8'))
         if reply > 0:
             reply = self._read_from_sp()
-            if _check_for_dollar(reply):
+            if self._check_for_dollar(reply):
                 if self._write_to_sp(message) > 0:
                     reply = self._read_from_sp()
                     if self._check_lora_response(reply):

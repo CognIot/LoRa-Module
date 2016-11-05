@@ -12,6 +12,7 @@ Functionality.
 
 import logging
 import LoRaCommsReceiverV2 as LCR_V2
+import random
 
 # setup the serial port
 # respond to setup of LoRa comms
@@ -31,7 +32,7 @@ def generate_ctrl_codes_mgs(size):
     codes = b'\r\nOK00>$'
     lt_msg = b''
     for char in range(0, size):
-        lt_msg = lt_msg + codes[random.randint(0,len(codes))]
+        lt_msg = lt_msg + chr(codes[random.randint(0,len(codes)-1)]).encode('utf-8')
     return lt_msg
 
 def build_list():
@@ -43,17 +44,21 @@ def build_list():
     # Send message of length 1 to 255, get back the same
     for i in range(0,256):
         msg = generate_message(i)
-        build.append("Message test %s" % i, msg, msg)
+        build.append(["Message test %s" % i, msg, msg])
     
     # Send messages of fixed length of 10 characters, but including the control characters, 10 random ones
     for i in range(0,10):
         msg = generate_ctrl_codes_mgs(10)
-        build.append("Control Code Messages %s" % i, msg, msg)
+        build.append(["Control Code Messages %s" % i, msg, msg])
         
     # Return LoRa error codes
     
     # Some non responses
     
+    # LoRa module not returning $
+    #   Send a special string to the simulator and it can then not return anything.
+    
+    return build
     
 
 def main():
@@ -65,7 +70,18 @@ def main():
     # The command below will instigate comms
     lora = LCR_V2.LoRaComms()
     
-    
+    for message in build_list():
+        sent_ok = lora.transmit(message[1])
+        if sent_ok:
+            get_back = receive()
+            if get_back == message[2]:
+                print("Test:%s PASSED" % message[0])
+            else:
+                print("Test:%s FAIED" % message[0])
+                time.sleep(1)
+
+
+    lora.exitcomms()
 
 
 
