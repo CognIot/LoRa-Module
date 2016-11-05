@@ -42,6 +42,9 @@ import RPi.GPIO as GPIO
 INPUT_PIN = 17
 LED_PIN = 23
 
+# Define the wait time during a packet transmission to wait for a new byte
+STARTTOEND = 0.1
+
 INTERDELAY = 0.3
 
 # LoRa Commands
@@ -137,6 +140,42 @@ def ns_get_byte_sent(fd):
     logging.debug("[SIM]: Data received over the serial port :%s" % reply)
     return reply
 
+def ns_get_packet(fd):
+    # Getting them 1 byte at a time, get the packet on the buffer
+    # Uses a timeout to decide when it has all packets
+    packet = b''                # the full packet being returned
+    reply = b''                 # The byte received
+    first_byte_time = 0         # The time the first byte was received
+    all_data = False            # Set tp True when all data received
+    # sit in a loop waiting for the data to be received
+    #   Set the timeout to start after the first byte
+    #   Set all_data to true on timeout
+    
+    while all_data == False:
+        # Get the data from the serial port
+        try:
+            reply = fd.read(1)
+            logging.debug("[SIM]: Got a byte of data:%s" % reply)
+        except:
+            logging.debug("[SIM]: NO data returned on the serial port")
+            reply = b''
+        # Check if there is anything
+        if len(reply) > 0:
+            # Set first_byte time if not set
+            if first_byte_time == 0:
+                first_byte_time = time.time()
+                logging.debug("[SIM]: Seen the first byte at time: %S" % time.strftime("%H:%M:%S", time.localtime(first_byte_time)))
+                #           Formatted the time in seconds to a HH:MM:SS
+            packet = packet + reply
+            reply = b''                 # Reset for the next byte
+        else:
+            # check if timeout, and if data, set all_data to true
+            if first_byte_time + STARTTOEND > time.time():
+                all_data = True
+                logging.debug("[SIM]: It has been %s seconds since the last byte was received" % STARTTOEND)
+            
+    return packet
+    
 def ns_send_back(fd, send):
     # Send the data given back over the UART
     try:
@@ -189,8 +228,9 @@ def ns_handle_config_cmd(fd, cmd):
     reply = b''
     logging.debug("[SIM]: Waiting for the %s command" % cmd)
     while reply != build_command(cmd):
-        reply = ns_get_sent(fd)
+        #reply = ns_get_sent(fd)
         #reply = reply + ns_get_byte_sent(fd)
+        reply = ns_get_packet(fd)
     logging.debug("[SIM]: Seen the %s command" % cmd)
 
     # Wait for a random period of time
@@ -237,12 +277,13 @@ if __name__ == '__main__':
     logging.basicConfig(filename="NodeSimulator.txt", filemode="w", level=logging.DEBUG,
                         format='%(asctime)s:%(levelname)s:%(message)s')
 
+    '''
     port = serial.Serial("/dev/ttyAMA0", baudrate=57600, timeout=3.0)
 
     while True:
         rcv = port.readall()
         print("Received:%s" % rcv)
-
+    '''
     main()
 
 
