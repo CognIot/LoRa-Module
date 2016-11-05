@@ -112,6 +112,22 @@ def ns_get_sent(fd):
         try:
             reply = fd.readall()
 
+            print("Reply:%s" % reply)       # Additional debug
+
+        except:
+            logging.warning("[SIM]: Reading of data on the serial port FAILED")
+            reply = b''
+
+    logging.debug("[SIM]: Data received over the serial port :%s" % reply)
+    return reply
+
+def ns_get_byte_sent(fd):
+    # Get the data over the UART and return it. Waits until there is data to read.
+    reply = b''
+    while len(reply) < 1:
+        try:
+            reply = fd.read(1)
+
 #BUG: I think this is returing all the data in 1 shot and not the first slash n.
 #       Could it be the readall is waiting too long, or the data sent is sent too quick.
         except:
@@ -139,33 +155,31 @@ def positive_response():
 def build_command(cmd):
     # Take the given command and build the string around it
     # return the binary string
-    first_part = b'\r\n'
-    expected = first_part + cmd + positive_response()
-
-#BUG: The built string is incorrect, need to check what is actually sent from the log files
-
+    second_part = b'\r\n'
+    expected = cmd + second_part
     return expected
 
 def ns_wake_up(fd):
     # Handle the wakeup sequence
-    # LCR sends \n repeatably until a psoitive response
+    # LCR sends \n repeatably until a positive response
     boot_time = random.randint(0,2000) / 1000       # set the wait time, in mS
     reply = b''
     # Wait for first \n
     logging.debug("[SIM]: Waiting for the first \\n sent")
     while reply != b'\n':
-        print("reply:%s" % reply)
-        reply = ns_get_sent(fd)
+        reply = ns_get_byte_sent(fd)
     logging.debug("[SIM]: Seen the first \\n sent")
 
     # Wait for a random period of time
-    starttime = time.timer() + boot_time
-    while time.timer() < starttime:
+    starttime = time.time() + boot_time
+    while time.time() < starttime:
         time.sleep(0.001)
     logging.debug("[SIM]: Waited for a random time: %s mS" % boot_time)
 
     # reply with positive response
     ns_send_back(fd, positive_response())
+
+    fd.flushInput()
 
     return
 
@@ -176,11 +190,12 @@ def ns_handle_config_cmd(fd, cmd):
     logging.debug("[SIM]: Waiting for the %s command" % cmd)
     while reply != build_command(cmd):
         reply = ns_get_sent(fd)
+        #reply = reply + ns_get_byte_sent(fd)
     logging.debug("[SIM]: Seen the %s command" % cmd)
 
     # Wait for a random period of time
-    starttime = time.timer() + reset_time
-    while time.timer() < starttime:
+    starttime = time.time() + reset_time
+    while time.time() < starttime:
         time.sleep(0.001)
     logging.debug("[SIM]: Waited for a random time: %s mS" % reset_time)
 
@@ -210,7 +225,6 @@ def main():
     port = ns_setup_uart()
     ns_setup_gpio()
 
-    ns_wake_up(port)
     ns_setup_lora(port)
 
     #TODO: From this point, the command beig received could be one of many and therefore
@@ -222,6 +236,12 @@ def main():
 if __name__ == '__main__':
     logging.basicConfig(filename="NodeSimulator.txt", filemode="w", level=logging.DEBUG,
                         format='%(asctime)s:%(levelname)s:%(message)s')
+
+    port = serial.Serial("/dev/ttyAMA0", baudrate=57600, timeout=3.0)
+
+    while True:
+        rcv = port.readall()
+        print("Received:%s" % rcv)
 
     main()
 
