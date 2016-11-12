@@ -14,6 +14,9 @@ import logging
 import LoRaCommsReceiverV2 as LCR_V2
 import random
 
+# Set a default header to the messages
+HEADER = b'1234!ABCD!\xff'
+
 # setup the serial port
 # respond to setup of LoRa comms
 # respond to the normal commands
@@ -24,7 +27,7 @@ def generate_message(size):
     for byte in range(0,256):
         lt_msg = lt_msg + chr(byte)
 
-    lt_msg = lt_msg[0:size].encode('utf-8')
+    lt_msg = HEADER + lt_msg[0:size].encode('utf-8')
     return lt_msg
 
 def generate_ctrl_codes_mgs(size):
@@ -32,7 +35,7 @@ def generate_ctrl_codes_mgs(size):
     codes = b'\r\nOK00>$'
     lt_msg = b''
     for char in range(0, size):
-        lt_msg = lt_msg + chr(codes[random.randint(0,len(codes)-1)]).encode('utf-8')
+        lt_msg = HEADER + lt_msg + chr(codes[random.randint(0,len(codes)-1)]).encode('utf-8')
     return lt_msg
 
 def build_list():
@@ -73,15 +76,15 @@ def main():
     for message in build_list():
         sent_ok = lora.transmit(message[1])
         if sent_ok:
-            get_back = receive()
+            get_back = lora.receive()
             if get_back == message[2]:
                 print("Test:%s PASSED" % message[0])
             else:
-                print("Test:%s FAIED" % message[0])
+                print("Test:%s FAILED" % message[0])
                 time.sleep(1)
 
 
-    lora.exitcomms()
+    lora.exit_comms()
 
 
 

@@ -53,6 +53,7 @@ LED_PIN = 23
 # LoRa Commands
 SENDB = b'AT+X'                     # Send a stream of n bytes long
 REC_LEN = b'AT+r'                   # Return the received length of data
+RECC = b'AT+A'                      # Request a stream of bytes
 RESET = b'AT!!'                     # Reset the LoRa module
 VERSION = b'AT*v'                   # Read the version of the LoRa module
 GLORA =  b'AT*q'                    # Display the current configuration
@@ -83,7 +84,8 @@ class LoRaComms:
             return False
 
         # Message to send is AT+X plus a space plus the length in 2 char hex, all encoded in binary string format
-        reply = self._write_to_sp(SENDB + b' ' + format(len(message), '02X').encode('utf-8'))
+        to_send = SENDB + b' ' + format(len(message), '02X').encode('utf-8')
+        reply = self._write_to_sp(to_send)
         if reply > 0:
             reply = self._read_from_sp()
             if self._check_for_dollar(reply):
@@ -100,8 +102,8 @@ class LoRaComms:
         self._wait_for_gpio()
         length = self._get_data_length()
         if length > 0:
-            reply = self._read_from_sp(length)
-            if self._check_lora_response(reply):
+            reply = self._get_data_packet(length)
+            if len(reply) > 0:
                 data = self._strip_out_data(reply, length)
                 if data['success']:
                     return data['reply']
@@ -268,7 +270,22 @@ class LoRaComms:
             reply = self._read_from_sp(9)
             if self._check_lora_response(reply):
                 length = int(reply[0:2], 16)
+        logging.info("[LCR]: Sent %s, expected message is %s bytes" %(REC_LEN, length))
         return length
+
+    def _get_data_packet(self, length):
+        # Send the RECC (AT+A) and decode the response to get the packet of the data
+        # The length is the length of the message, not including the \r\nOK00> - 7 bytes
+        # return the length, or zero on fail
+        packet = b''
+        if self._write_to_sp(RECC) > 0:
+            # Expect to get 'message\r\nOK00>' where message is the packet of length given
+            reply = self._read_from_sp()        #was (length) in parameters
+            if self._check_lora_response(reply):
+#                packet = (reply[0:length], 16)
+                packet = reply[0:length]
+        logging.info("[LCR]: Received Data Packet:%s" % packet)
+        return packet
 
     def _strip_out_data(self, message, length):
         # given the message of data, strip out the data and return it
@@ -281,7 +298,7 @@ class LoRaComms:
             return {'success':False, 'reply':ans}
 
         # Populate the first part of the data (ans) with the data
-        ans = reply[0:length]
+        ans = message[0:length]
         logging.info("[LCR} - Data of length >%s< read from the Serial port: %a" % (length, ans))
         return {'success':True, 'reply':ans}
 
