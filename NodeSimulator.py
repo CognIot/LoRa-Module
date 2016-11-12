@@ -68,8 +68,9 @@ def ns_setup_gpio():
 def set_gpio(state):
     # Set the GPIO pin to the required state.
     GPIO.output(INPUT_PIN, state)
+    logging.debug("[SIM]: GPIO Pin %s set to %s" % (INPUT_PIN, state))
     return
-    
+
 def reset_gpio():
     # Reset the GPIO pin back to the normal level after a time period.
     time.sleep(0.25)
@@ -161,15 +162,9 @@ def ns_get_packet(fd):
     # sit in a loop waiting for the data to be received
     #   Set the timeout to start after the first byte
     #   Set all_data to true on timeout
-    
+
     while all_data == False:
         # Get the data from the serial port
-        #try:
-            #reply = fd.read(1)
-            #logging.debug("[SIM]: Got a byte of data:%s" % reply)
-        #except:
-            #logging.debug("[SIM]: NO data returned on the serial port")
-            #reply = b''
         if fd.inWaiting() > 0:
             reply = fd.read(1)
             logging.debug("[SIM]: Got a byte of data:%s" % reply)
@@ -189,9 +184,13 @@ def ns_get_packet(fd):
             if first_byte_time + STARTTOEND > time.time():
                 all_data = True
                 logging.debug("[SIM]: It has been %s seconds since the last byte was received" % STARTTOEND)
-            
+
+#BUG: Need to be checking for the time since the last byte received, rather than the first.
+
+    logging.debug("[SIM]: Full data packet received: %s" % packet)
+    packet = packet.rstrip(b'\r\n')
     return packet
-    
+
 def ns_send_back(fd, send):
     # Send the data given back over the UART
     try:
@@ -214,10 +213,10 @@ def ns_send_back_gpio(fd, send):
         ans = 0
     set_gpio(True)
     return ans
-    
+
 def positive_response():
     # Construct a positive response
-    pos_rsp = b'\n\rOK00>'
+    pos_rsp = b'\r\nOK00>'
     return pos_rsp
 
 def build_command(cmd):
@@ -257,7 +256,7 @@ def ns_handle_config_cmd(fd, cmd):
     reply = b''
     logging.debug("[SIM]: Waiting for the %s command" % cmd)
 #    while reply != build_command(cmd):
-    while build_command(cmd) not in reply:
+    while cmd not in reply:
         #reply = ns_get_sent(fd)
         #reply = reply + ns_get_byte_sent(fd)
         reply = ns_get_packet(fd)
@@ -277,7 +276,7 @@ def ns_setup_lora(fd):
     # Handle the setup commands expected for a module.
     # Expected command sequence
     ns_wake_up(fd)
-    
+
     #TODO: Need to handle repeats of the commands, build something similar to the decode routine in HubDataDecoder
     ns_handle_config_cmd(fd,NS_RESET)
     ns_handle_config_cmd(fd,NS_VERSION)
@@ -290,24 +289,67 @@ def ns_get_length(fd):
     packet = ns_get_packet(fd)
     # Expected response is AT+X len
     if b'AT+X' in packet:
-        length = packet[5:6]
-        length = int(length)
+        length = packet[5:7]
+        length = int(length,16)
     else:
-        lenth = 0
-    
+        length = 0
+    logging.debug("[SIM]: Length message decoded length: %s" % length)
     return length
+
+def ns_get_rec_len_req(fd):
+    # Receive and decode the received length data from the message - AT+r
+    packet = ns_get_packet(fd)
+    # Expected response is AT+r len
+    if NS_REC_LEN in packet:
+        logging.debug("[SIM]: AT+r received")
+        return True
+    return False
+
+def ns_reply_sending_x_bytes(fd, msg):
+    # generate the LoRa data available message and send it
+    reply = b''
+    reply = format(len(msg), '02X').encode('utf-8') + positive_response()
+    logging.debug("[SIM]: Message to send back: %s" % reply)
+    ns_send_back(fd,reply)
+    return
+
+def ns_get_rec_strm_bytes(fd):
+    # Receive a AT+A
+    packet = ns_get_packet(fd)
+    # Expected response is AT+A len
+    if b'AT+A' in packet:
+        logging.debug("[SIM]: AT+A received")
+        return True
+    return False
+
+def ns_get_rec_data(fd):
+    # Receive and decode the received length data from the message - AT+r
+    packet = ns_get_packet(fd)
+    # Expected response is AT+r len
+    if b'AT+r' in packet:
+        logging.debug("[SIM]: AT+r received")
+        return True
+    return False
 
 def ns_reply_with_sent(fd):
     # Read what has been received and send it straight back.
-    
+
     while True:
         # Process to expect
         length_of_msg = ns_get_length(fd)       #   AT+X len
-        if length_of_message > 0:
+        print("Got %s bytes" % length_of_msg)
+        if length_of_msg > 0:
             ns_send_back(fd, b'$')              #   return $
             ns_received = ns_get_packet(fd)     #   Get message
-            time.sleep(random.randint(0,500) / 1000)
-            ns_send_back_gpio(fd, ns_received)
+            ns_send_back(fd, positive_response())           #   Reply with positive response
+            set_gpio(True)                      # Data pin goes high
+            #ns_received = ns_received + positive_response()
+            if ns_get_rec_len_req(fd):          # AT+r
+                ns_reply_sending_x_bytes(fd, ns_received)     # Send back the data packet length
+                if ns_get_rec_strm_bytes(fd):              # AT+A plus length
+                    #time.sleep(random.randint(0,500) / 1000)
+                    ns_received = ns_received + positive_response()
+                    ns_send_back(fd, ns_received)           # Send back data packet received
         reset_gpio()
 
 def main():
@@ -319,7 +361,7 @@ def main():
 
     #From this point, the command being received could be one of many and therefore it is simply sent
     # back after a random time
-    
+
     ns_reply_with_sent(port)
 
     return
