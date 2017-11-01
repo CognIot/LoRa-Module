@@ -69,7 +69,7 @@ class LoRaComms:
     '''
 
     def __init__(self):
-        # initialise the comms for the module
+        # initialise the comms  for the module
         self.fd = self._setup_uart()
         self._setup_gpio()
         self._setup_lora()
@@ -122,8 +122,6 @@ class LoRaComms:
         # Returns the data length or 0 if failed
         # add the control characters
         send = data_to_transmit + b'\r\n'
-
-        print("Data To Send:%s" % send)     #Additonal Debug
 
         try:
             ans = self.fd.write(send)

@@ -7,10 +7,12 @@ An instance of the NODE class is created for each Node <==> Hub association
 #TODO: Add in capability for multiple nodes to work with the one hub.
     Something to be added into validated after the item has been associated.
     
-
+#TODO: Hub becomes receiver HUB - RECEIVER
+#TODO: Node becomes sender  NODE - SENDER
 '''
 import logging
 import time
+import binascii
 
 # Pointers to the position of the parts of the packet
 START_HUB_ADDR = 0          # Position in packet where hub address starts
@@ -51,17 +53,18 @@ class NODE:
     No need for timeout as there are no sequenced comms, only ping, association and send data
     '''
     def __init__(self, node, hub):
+        # node and hub are normal strings passed in that are converted to binary mode
         
-        self.associated = False     # Associated is used to determine if the unit is already associated
-        self.node = node            # The Node address that the instance supports
-        self.hub = hub              # The Hub address in use
-        self.last_message = b''      # Set to the last valid packet
+        self.associated = False                 # Associated is used to determine if the unit is already associated
+        self.node = node.encode('utf-8')        # The Node address that the instance supports
+        self.hub = hub.encode('utf-8')          # The Hub address in use
+        self.last_incoming_message = b''        # Set to the last valid packet
         logging.info("[HDD]: NODE class instantiated with node:%s, hub:%s" % (self.node, self.hub))
         self._reset_values()
         #TODO: Track the time it is received
         return
         
-    
+    #TODO: Should incoming reply with something, maybe the status?
     def incoming(self, message):
         # Taken the given message and process it.
         # Return the message to send
@@ -91,16 +94,18 @@ class NODE:
                     if self.command == Ping:
                         # Send the Ping response
                         logging.info("[HDD]: Ping Command Received")
+
+                        #TODO: Need to include the ability to send data back in the ping response
                         self.response = self._generate_ack()
                         self.response_status = True
                     elif self.command == DataPacket:
                         # Send an Acknowledge
                         logging.info("[HDD]: Data Packet Command Received")
-                        if message == self.last_message:
+                        if message == self.last_incoming_message:
                             self._display_message("RECV: Duplicate Packet Seen")
                             logging.info("[HDD]: Duplicate Data Packet Received")
                         else:
-                            self.last_message = message
+                            self.last_incoming_message = message
                             self.response = self._generate_ack()
                             self.response_status = True
                     elif self.command == AssociationRequest:
@@ -127,7 +132,7 @@ class NODE:
                 logging.info("[HDD]: Message received is invalid")
                 self.response = b''
                 self.response_status = False
-    #TODO: DO we send unrecognised command
+    #TODO: Do we send unrecognised command
 
     #TODO: Need to also deal with a failure in the LoRa comms, as maybe worth sending some other response.
 
@@ -138,13 +143,63 @@ class NODE:
         return self.response
     
     def reply_status(self):
+        # If True, a reply is to be sent
         return self.response_status
 
     def reply_payload_len(self):
+        # The length of the data in the payload
         return self.payload_len
         
     def reply_payload(self):
+        # The data that has been sent
         return self.payload
+
+
+#TODO: Methods to create
+    def outgoing_AssociateRequest(self):
+        # Prepare an Associate message to send
+        # return the message to be sent
+        #TODO: Hub becomes receiver HUB - RECEIVER
+        #TODO: Node becomes sender  NODE - SENDER
+
+        self.outgoing_message = b''
+        self.outgoing_message = self.outgoing_message + self.hub + CONTROL_BYTE      # Sender address & Control byte
+        self.outgoing_message = self.outgoing_message + self.node + CONTROL_BYTE    # Receiver address & Control byte
+        self.outgoing_message = self.outgoing_message + AssociationRequest
+        return self.outgoing_message
+
+    def outgoing_DataPack(self, data):
+        # Prepare a Data Packet message with the included data supplied
+        # Data is supplied as a string
+        # return the message to be sent
+
+        # build the packet here using things like
+        #self.hub, self.node, CONTROL_BYTE, 
+        #TODO: Hub becomes receiver HUB - RECEIVER
+        #TODO: Node becomes sender  NODE - SENDER
+        self.outgoing_message = b''
+        self.outgoing_message = self.outgoing_message + self.hub + CONTROL_BYTE      # Sender address & Control byte
+        self.outgoing_message = self.outgoing_message + self.node + CONTROL_BYTE    # Receiver address & Control byte
+        self.outgoing_message = self.outgoing_message + DataPacket
+        self.outgoing_message = self.outgoing_message + chr(packet[data]).encode('utf-8')
+        self.outgoing_message = self.outgoing_message + data.encode('utf-8')
+        return self.outgoing_message
+
+    def outgoing_Ping(self):
+        # Prepare a Data Packet message to send the ping
+        # return the message to be sent
+        # build the packet here using things like
+        #TODO: Hub becomes receiver HUB - RECEIVER
+        #TODO: Node becomes sender  NODE - SENDER
+        self.outgoing_message = b''
+        self.outgoing_message = self.outgoing_message + self.hub + CONTROL_BYTE      # Sender address & Control byte
+        self.outgoing_message = self.outgoing_message + self.node + CONTROL_BYTE    # Receiver address & Control byte
+        self.outgoing_message = self.outgoing_message + Ping
+        self.outgoing_message = self.outgoing_message + ZeroPayload
+
+        self.outgoing_message       # contains the message to be sent back
+        return self.outgoing_message
+
     
     def exit_hub(self):
         # This routine is called to clean up any items on exit of the main program
@@ -184,6 +239,8 @@ class NODE:
                 
         self.response = b''         # The message to be returned
         self.response_status = False    # The status of the responding message (True = Valid message)
+
+        self.outgoing_message = b''     # The message to be transmitted
         return
     
     def _validate_packet(self, packet):
@@ -210,7 +267,7 @@ class NODE:
                        ValidPacket = True           # Validating of the payload moved to LogFileWriter
                     elif chr(packet[StartCommand]).encode('utf-8') == Ping or \
                                 chr(packet[StartCommand]).encode('utf-8') == DataToSendReq:
-                        # no payload so only addr descripters and messag elength can be used
+                        # no payload so only addr descripters and message length can be used
                         valid_packet = True
         logging.info("[HDD] - Packet of data has been validated :%s" % packet)
         return ValidPacket

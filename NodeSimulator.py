@@ -241,7 +241,7 @@ def ns_wake_up(fd):
     starttime = time.time() + boot_time
     while time.time() < starttime:
         time.sleep(0.001)
-    logging.debug("[SIM]: Waited for a random time: %s mS" % boot_time)
+    logging.debug("[SIM]: Waited for a random time: %s S" % boot_time)
 
     # reply with positive response
     ns_send_back(fd, positive_response())
