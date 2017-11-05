@@ -8,7 +8,7 @@ This program is used to control the communications between the Hub and the Node
 import sys
 
 from LoRaCommsReceiverV2 import LoRaComms as LoRa
-from HubDataDecoderV2 import NODE as Hub
+from HubDataDecoderV2 import NODE as Receiver
 import Standard_Settings as SS
 import json
 import os
@@ -97,11 +97,10 @@ def SetOperationalParameters():
 
     choice = ""
     while choice == "":
-        choice = input("Please enter the Hub Address?")
+        choice = input("Please enter the Hub Address? ")
         if choice.isdigit():
             choice = int(choice)
-            if choice in range(1,100):
-                op_info['hub_addr'] = choice
+            op_info['hub_addr'] = choice
         else:
             print("Please enter a number")
             choice = ""
@@ -109,11 +108,10 @@ def SetOperationalParameters():
 
     choice = ""
     while choice == "":
-        choice = input("Please enter the Node Address")
+        choice = input("Please enter the Node Address? ")
         if choice.isdigit():
             choice = int(choice)
-            if choice in range(1,100):
-                op_info['node_addr'] = choice
+            op_info['node_addr'] = choice
         else:
             print("Please enter a number")
             choice = ""
@@ -356,7 +354,7 @@ def Hub(op_info):
     gbl_log.info("[CTRL] Starting Hub Operation")
     try:
         comms = LoRa()
-        decode = Hub(op_info['hub_addr'], op_info['node_addr'])
+        decode = Receiver(op_info['hub_addr'], op_info['node_addr'])
         while True:
             message = comms.receive()
             gbl_log.debug("[CTRL] Message received from the comms:%s" % message)
@@ -389,7 +387,7 @@ def Node(op_info):
     associated = False
     try:
         comms = LoRa()
-        decode = Hub(op_info['hub_addr'], op_info['node_addr'])
+        decode = Receiver(op_info['hub_addr'], op_info['node_addr'])
         while True:
             # Start the timer
             endtime = datetime.now() + timedelta(seconds=op_info['dir_read_freq'])
