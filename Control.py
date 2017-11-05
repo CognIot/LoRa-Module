@@ -97,9 +97,8 @@ def SetOperationalParameters():
 
     choice = ""
     while choice == "":
-        choice = input("Please enter the Hub Address? ")
-        if choice.isdigit():
-            choice = int(choice)
+        choice = input("Please enter the Hub Address (4chr Hex)? ")
+        if len(choice) == 4:
             op_info['hub_addr'] = choice
         else:
             print("Please enter a number")
@@ -108,9 +107,8 @@ def SetOperationalParameters():
 
     choice = ""
     while choice == "":
-        choice = input("Please enter the Node Address? ")
-        if choice.isdigit():
-            choice = int(choice)
+        choice = input("Please enter the Node Address (4chr Hex)? ")
+        if len(choice) == 4:
             op_info['node_addr'] = choice
         else:
             print("Please enter a number")

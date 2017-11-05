@@ -12,7 +12,6 @@ An instance of the NODE class is created for each Node <==> Hub association
 '''
 import logging
 import time
-import binascii
 
 # Pointers to the position of the parts of the packet
 START_HUB_ADDR = 0          # Position in packet where hub address starts
