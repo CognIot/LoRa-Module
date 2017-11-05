@@ -10,6 +10,10 @@ RECORDFILE_OLD = ".oldrec"          # The extension used when the record can't b
 RECORD_TRY_COUNT = 10               # How many times, when connected the Data Accessor will try and send a record
 EEPROM_READ_RETRY = 5               # How many times it will try and read data from the EEPROM
 
+#Comms general values
+REPLY_WAIT = 5                      # How long to wait for a response
+RETRIES = 5                         # How many attempts to take to communicate
+
 
 def test():
 

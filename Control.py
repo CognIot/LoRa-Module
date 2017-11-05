@@ -7,11 +7,17 @@ This program is used to control the communications between the Hub and the Node
 
 import sys
 
-import LoRaCommsReceiverV2 as LoRa
-import HubDataDecoderV2 as Hub
-import Standard_settings as SS
-#import LogFileWriter
+from LoRaCommsReceiverV2 import LoRaComms as LoRa
+from HubDataDecoderV2 import NODE as Hub
+import Standard_Settings as SS
+import json
+import os
+import logging
+import logging.config
+import dict_LoggingSetup
+import argparse
 
+#BUG: This can only handle 127 bytes, so the data transferred is 
 # This will need to set the HUB address??
 
 def SetandGetArguments():
@@ -23,7 +29,7 @@ def SetandGetArguments():
     gbl_log.info("[CTRL] Setting and Getting Parser arguments")
     parser = argparse.ArgumentParser(description="Set the functionality for transferring data using LoRa")
     Main_group = parser.add_mutually_exclusive_group()
-    Main_group.add_argument("-h", "--hub", action="store_true",
+    Main_group.add_argument("-u", "--hub", action="store_true",
                     help="Run as a Hub, receiving and storing data")
     Main_group.add_argument("-n", "--node", action="store_true",
                     help="Run as a Node, sending already stored data")
@@ -62,7 +68,7 @@ def DisplayOperationalParameters(op_info):
 
     return
 
-def SetOperationalParameters(device):
+def SetOperationalParameters():
     """
     Perform the necessary actions to allow the clinet to set the parameter data being used
 
@@ -76,8 +82,6 @@ def SetOperationalParameters(device):
 #TODO: Set the right parameters
     print("Setting Operational Information\n")
     op_info = {}
-    op_info['device'] = device
-    gbl_log.debug("[CTRL] Device Number:%s" % device)
 
     choice = ""
     while choice == "":
@@ -106,7 +110,7 @@ def SplashScreen():
     print("***********************************************\n")
     return
 
-def LoadOperationalInfo(dev):
+def LoadOperationalInfo():
     """
     Load the Operational File information and return it in a dictionary
     op_info = {"dir_read_freq": nnn}
@@ -123,8 +127,6 @@ def LoadOperationalInfo(dev):
     else:
         print("No existing operational file, please Set Operational info")
         gbl_log.info("[CTRL] No Operational file exisitng")
-
-    opfile['device'] = dev        #device_id is set by the UUID of the Pi
 
     # Validate the operational info that has been read back.
     status = True
@@ -152,37 +154,248 @@ def SaveOperationalInfo(op_info):
 def WriteDataToDir(dataset):
     """
     Write the given data to the operational directory
-
-
+    Takes the given data and creates a new file with the contents of it
+    Format of the filename is based on standard settings
+        RECORDFILE_NAME+timestamp+RECORDFILE_EXT
+    Stored in sub folder
+        RECORDFILE_LOCATION
+    Returns true if the record is written, or false if it isn't
+    Disk space management is handled by the calling program
     """
-#TODO: Do somethign!!!
+    status = False
+    file_time = datetime.now().strftime("%y%m%d%H%M%S-%f")
 
+    #TODO: If the datafile directoryu doesn't exist, an error is thrown!
+
+    data_record_name = SS.RECORDFILE_LOCATION + '/' + SS.RECORDFILE_NAME + file_time + SS.RECORDFILE_EXT
+    self.log.info("[DAcc] Writing new record to disk:%s" % data_record_name)
+
+    #TODO: Need to handle a failure to open the file
+    with open(data_record_name, mode='w') as f:
+        json.dump(data_to_write, f)
+        status = True
+    return status
 
     return
+
+def CheckForData():
+    """
+    Check for files in the directory, return True or False
+    """
+
+#TODO: Need to complete this
+
+    return
+
+def SendRecord(lora, decoder, record):
+    """
+    Taken the given record contents, send it 
+    """
+    retries = SS.RETRIES
+    data_sent = False
+    while data_sent == False and retries > 0:
+        # timer is handed by the LoRa comms layer
+        gbl_log.info("[CTRL] Starting Record Send")
+
+        # Send association request
+        msg = decoder.outgoing_DataPack(record)
+        status = lora.transmit(msg)
+
+        if status:
+            # Wait for repsonse within timeout
+            reply = lora.receivetimeout(SS.REPLY_WAIT)
+
+            #check for the correct reply
+            #TODO: Need a method to validate NODE incoming messages
+            if len(reply) > 11:
+                gbl_log.debug("[CTRL] Message received is greater than the miminum length")
+                if reply[10] == chr(0x22).encode('utf-8'):
+                    #Data Sent
+                    gbl_log.debug("[CTRL] Message received has ACK command byte")
+                    data_sent=True
+                else:
+                    retries = retries - 1
+                    gbl_log.debug("[CTRL] reply[10] didn't contain 0x22")
+            else:
+                retries = retries - 1
+                gbl_log.debug("[CTRL] length of reply was less than 11 characters")
+        else:
+            # Failed to send message.
+            retries = retries - 1
+            gbl_log.debug("[CTRL] LoRa Comms returned a negative response")
+    return data_sent
+    
+def RemoveRecordFile(record_to_remove):
+    """
+    Remove the file from the directory
+    """
+
+    if os.path.isfile(SS.RECORDFILE_LOCATION+'/' + record_to_remove):
+        os.remove(SS.RECORDFILE_LOCATION+'/' + record_to_remove)
+        gbl_log.info("[CTRL] Record File deleted:%s" % SS.RECORDFILE_LOCATION+'/' + record_to_remove)
+    return
+
+def RenameRecordFile(record_to_rename):
+    """
+    Rename the current file to the old name so it is no longer sent
+    """
+    if os.path.isfile(SS.RECORDFILE_LOCATION+'/' + record_to_rename):
+        os.rename(SS.RECORDFILE_LOCATION+'/' + record_to_rename, SS.RECORDFILE_LOCATION+'/' + record_to_rename[-3:] + SS.RECORDFILE_OLD)
+        gbl_log.info("[DAcc] Record File renamed:%s" % SS.RECORDFILE_LOCATION+'/' + record_to_rename[-3:] + SS.RECORDFILE_OLD)
+    return
+        
+def SendData(lora, decoder):
+    """
+    Take all the files in the directory and send them one at a time
+    Given the LoRa class and the Decoder class to use
+    Needs to handle association as well as data sending
+    """
+
+    gbl_log.info("[CTRL] Getting the list of files to use and selecting one")
+    status = False
+    list_of_files = os.listdir(path=SS.RECORDFILE_LOCATION+'/.')
+    list_of_files.sort()
+    gbl_log.debug("[CTRL] Files to Use :%s" % list_of_files)
+    for record_to_use in list_of_files:
+        gbl_log.debug("[CTRL] File being checked for extension of %s:%s" % (SS.RECORDFILE_EXT, i))
+        if i[-len(SS.RECORDFILE_EXT):] == SS.RECORDFILE_EXT:
+            with open(file_name, mode='r') as f:
+                record = json.load(f)
+                #BUG: The line above is reading [] and assuming it is a string and not a list!
+                gbl_log.debug("[CTRL] Record loaded for use:%s" % record)
+            
+                if len(record) > 0:
+                    gbl_log.debug("[CTRL] Length of record:%s" % len(record))
+                    status = SendRecord(lora,decoder,record)
+                    if status == True:
+                        RemoveRecordFile(record_to_use)
+                        record_try_count = 0
+                    else:
+                        record_try_count = record_try_count + 1
+                        if record_try_count > SS.RECORD_TRY_COUNT:
+                            gbl_log.error("[CTRL] Failed to send record over %s times, record archived" % record_try_count)
+                            gbl_log.info("[CTRL] Archived Record:%s" % record)
+                            RenameRecordFile(record)
+                        else:
+                            time.sleep(record_try_count)        # Wait for a period before retrying
+                else:
+                    more_data = False
+                    gbl_log.info("[CTRL] No more data records to read")
+    return status
+
+def GetAssociated(lora, decoder):
+    """
+    Perform the necessary actions to get associated
+    returns True is successful, False if not
+    The timing is handled by the LoRa module
+    """
+    #RETRIES outer loop
+    retries = SS.RETRIES
+    assocaited = False
+    while associated == False and retries > 0:
+        # timer is handed by the LoRa comms layer
+        gbl_log.info("[CTRL] Starting association")
+
+        # Send association request
+        msg = decoder.outgoing_AssociateRequest()
+        status = lora.transmit(msg)
+
+        if status:
+            # Wait for repsonse within timeout
+            reply = lora.receivetimeout(SS.REPLY_WAIT)
+
+            #check for the correct reply
+            #TODO: Need a method to validate NODE incoming messages
+            if len(reply) > 11:
+                gbl_log.debug("[CTRL] Message received is greater than the miminum length")
+                if reply[10] == chr(0x31).encode('utf-8'):
+                    #Associated
+                    gbl_log.debug("[CTRL] Message received has correct command byte")
+                    associated=True
+                else:
+                    retries = retries - 1
+                    gbl_log.debug("[CTRL] reply[10] didn't contain 0x31")
+            else:
+                retries = retries - 1
+                gbl_log.debug("[CTRL] length of reply was less than 11 characters")
+        else:
+            # Failed to send message.
+            retries = retries - 1
+            gbl_log.debug("[CTRL] LoRa Comms returned a negative response")
+    return associated
     
 def Hub(op_info):
     """
     Perform the necessary functionality to operate as a Hub
     """
-    gbl_log.debug("[CTRL] Starting Hub Operation"))
+    gbl_log.info("[CTRL] Starting Hub Operation")
     try:
         comms = LoRa()
-        decode = Hub(op_info['hub_addr'], op_info['node_addr']
+        decode = Hub(op_info['hub_addr'], op_info['node_addr'])
         while True:
             message = comms.receive()
+            gbl_log.debug("[CTRL] Message received from the comms:%s" % message)
             decode.incoming(message)
             if decode.reply_status:
                 if decode.reply_payload_len() > 0:
                     WriteDataToDir(decode.reply_payload())
-                message = comms.transmit(decode.reply())
-                
-
+                status = comms.transmit(decode.reply())
+                #TODO: Add some capability to retry if failure
 
     except KeyboardInterrupt:
         # CTRL - C entered
         print(" CTRL-C entered")
         gbl_log.debug("[CTRL] User Interrupt occurred (Ctrl-C)")
-        icog.EndReadings()
+        gbl_log.info("[CTRL] End of Processing")
+
+        #TODO: Need to add in some functionality here to stop the sensor.
+    except:
+        #Error occurrred
+        gbl_log.critical("[CTRL] Error occurred whilst looping to read values")
+        print("\nCRITICAL ERROR during rading of sensor values- contact Support\n")
+        gbl_log.exception("[CTRL] Start reading loop Exception Data")
+    return
+
+def Node(op_info):
+    """
+    Perform the necessary functions to act as a node.
+    """
+    gbl_log.info("[CTRL] Starting Node Operation")
+    associated = False
+    try:
+        comms = LoRa()
+        decode = Hub(op_info['hub_addr'], op_info['node_addr'])
+        while True:
+            # Start the timer
+            endtime = datetime.now() + timedelta(seconds=op_info['dir_read_freq'])
+            print("\r\r\r\r\r\r\rReading", end="")
+
+            if associated == False:
+                associated = GetAssociated(comms, decode)
+
+            if associated:
+                if CheckForData():
+                    # If there is a file to send, send it
+                    SendData(comms, decode)
+
+            # Wait for timeout
+            waiting = False
+            while endtime > datetime.now():
+                if waiting == False:
+                    print("\r\r\r\r\r\r\rWaiting", end="")
+                    gbl_log.debug("[CTRL] Waiting for timeout to complete")
+                    waiting=True
+                # Use time.sleep to wait without processor burn at 25%
+                sleep = datetime.now() - endtime
+                if sleep.total_seconds() > 2:
+                    time.sleep(sleep.total_seconds() - 0.1)
+                else:
+                    time.sleep(0.1)
+        
+    except KeyboardInterrupt:
+        # CTRL - C entered
+        print(" CTRL-C entered")
+        gbl_log.debug("[CTRL] User Interrupt occurred (Ctrl-C)")
         gbl_log.info("[CTRL] End of Processing")
 
         #TODO: Need to add in some functionality here to stop the sensor.
@@ -192,10 +405,7 @@ def Hub(op_info):
         print("\nCRITICAL ERROR during rading of sensor values- contact Support\n")
         gbl_log.exception("[CTRL] Start reading loop Exception Data")
 
-
-
     return
-
 
 def main():
     # The main program that calls all the necessary routines for the rest.
@@ -206,10 +416,10 @@ def main():
 
     args = SetandGetArguments()
 
-    status, operational_info = LoadOperationalInfo(device_id)
+    status, operational_info = LoadOperationalInfo()
     if status != True:
         print("Operational Infomation is missing or incomplete, please re-enter")
-        operational_info = SetOperationalParameters(device_id)
+        operational_info = SetOperationalParameters()
 
 
     if args.hub:
@@ -219,18 +429,15 @@ def main():
     elif args.displayinfo:
         DisplayOperationalParameters(operational_info)
     elif args.setinfo:
-        SetOperationalParameters(device_id)
+        SetOperationalParameters()
     else:
-        Hub()
+        Hub(operational_info)
 
     return
 
 # Only call the independent routine if the module is being called directly, else it is handled by the calling program
 if __name__ == "__main__":
-    logging.basicConfig(filename="HubDecoder.txt", filemode="w", level=LG_LVL,
-                        format='%(asctime)s:%(levelname)s:%(message)s')
-
-
+    
     try:
         main()
     

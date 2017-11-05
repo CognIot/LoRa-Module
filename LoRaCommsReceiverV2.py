@@ -109,6 +109,21 @@ class LoRaComms:
                     return data['reply']
         return b''
 
+    def receivetimeout(self, waittime):
+        # Receive data on the comms port and return it to the calling program if data received
+        # within the timeout period
+        # NOTE: It can return zero bytes if there is no data to read
+
+        self._wait_for_gpio_timeout(waittime)
+        length = self._get_data_length()
+        if length > 0:
+            reply = self._get_data_packet(length)
+            if len(reply) > 0:
+                data = self._strip_out_data(reply, length)
+                if data['success']:
+                    return data['reply']
+        return b''
+
     def exit_comms(self):
         # This routine is called on the exit of the main program
         GPIO.cleanup()
@@ -259,6 +274,22 @@ class LoRaComms:
         logging.debug("[LCR]: Data Pin gone high at time :%s" % time.strftime("%d-%m-%y %H:%M:%S"))
         return
 
+    def _wait_for_gpio_timeout(self, waittime):
+        # Routine monitors the GPIO pin and waits for the line to go high indicating a packet.
+        logging.debug("[LCR]: Timeout waiting for data pin to go high")
+        logging.info(" ")       # Add blank line for readability of the log file
+
+        status = 0
+        endtime = datetime.now() + timedelta(seconds=waittime)
+        timeout = False
+        while(status!=1) or timeout == True:
+            status = GPIO.input(INPUT_PIN)
+            if datetime.now() > endtime:
+                timeout=True
+        
+        logging.debug("[LCR]: Data Pin status at end of wait:%s, time :%s" % (status, time.strftime("%d-%m-%y %H:%M:%S")))
+        return
+        
     def _get_data_length(self):
         # Send the REC_LEN (AT+r) and decode the response to get the length of the data
         # return the length, or zero on fail

@@ -7,8 +7,8 @@ An instance of the NODE class is created for each Node <==> Hub association
 #TODO: Add in capability for multiple nodes to work with the one hub.
     Something to be added into validated after the item has been associated.
     
-#TODO: Hub becomes receiver HUB - RECEIVER
-#TODO: Node becomes sender  NODE - SENDER
+#TODO: Hub becomes receiver HUB -> RECEIVER
+#TODO: Node becomes sender  NODE -> SENDER
 '''
 import logging
 import time
@@ -66,6 +66,7 @@ class NODE:
         
     #TODO: Should incoming reply with something, maybe the status?
     def incoming(self, message):
+        # This method is for HUBS only
         # Taken the given message and process it.
         # Return the message to send
         # These are from the contents of the message, clear them all when processing the message 
