@@ -95,9 +95,34 @@ def SetOperationalParameters():
             choice = ""
     gbl_log.debug("[CTRL] Directory Read Frequency Number:%s" % choice)
 
+    choice = ""
+    while choice == "":
+        choice = input("Please enter the Hub Address?")
+        if choice.isdigit():
+            choice = int(choice)
+            if choice in range(1,100):
+                op_info['hub_addr'] = choice
+        else:
+            print("Please enter a number")
+            choice = ""
+    gbl_log.debug("[CTRL] Hub Address:%s" % choice)
+
+    choice = ""
+    while choice == "":
+        choice = input("Please enter the Node Address")
+        if choice.isdigit():
+            choice = int(choice)
+            if choice in range(1,100):
+                op_info['node_addr'] = choice
+        else:
+            print("Please enter a number")
+            choice = ""
+    gbl_log.debug("[CTRL] Node Address:%s" % choice)
+    
+    #TODO: Add in setting of the sensor info at this stage?
+
     SaveOperationalInfo(op_info)
 
-    #TODO: Add in setting of the sensor info at this stage?
     return op_info
 
 def SplashScreen():
@@ -130,7 +155,7 @@ def LoadOperationalInfo():
 
     # Validate the operational info that has been read back.
     status = True
-    for item in ['dir_read_freq']:
+    for item in ['dir_read_freq', 'hub_addr', 'node_addr']:
         if item not in opfile:
             status = False
             gbl_log.info("[CTRL] Missing item from the operational file:%s" % item)

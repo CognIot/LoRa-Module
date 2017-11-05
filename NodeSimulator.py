@@ -4,7 +4,7 @@ This program provides a ELB module simulator to test the main LoRa program
 
 For more info see www.CognIot.eu
 
-This operates at the lowest level possible, without actual comms down the serial port.
+This operates at the lowest level possible, without actual comms down the serial 2port.
 
 The LoRaComms class can opoerate in test mode:
     self.normal_mode = False
