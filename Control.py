@@ -197,7 +197,7 @@ def WriteDataToDir(dataset):
     #TODO: Need to handle a failure to open the file
     with open(data_record_name, mode='w') as f:
         #json.dump(dataset, f)
-        f.write(dataset)        # Debug TEst
+        f.write(dataset.decode('utf-8'))        # Debug TEst
         status = True
     return status
 
@@ -290,7 +290,7 @@ def SendData(lora, decoder):
         if record_to_use[-len(SS.RECORDFILE_EXT):] == SS.RECORDFILE_EXT:
             with open(SS.RECORDFILE_LOCATION+'/'+record_to_use, mode='r') as f:
                 #record = json.load(f)
-                record=f        #TEST
+                record=f.read()        #TEST
                 #BUG: The line above is reading [] and assuming it is a string and not a list!
                 gbl_log.debug("[CTRL] Record loaded for use:%s" % record)
             
