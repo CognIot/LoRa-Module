@@ -3,7 +3,7 @@ OPFILE_NAME = "custfile.txt"
 OPFILE_LOCATION = "."
 
 #Recordfile locations
-RECORDFILE_LOCATION = "DataFiles"           # Where to store the records file, program automatically added '/' at the end
+RECORDFILE_LOCATION = "/home/pi/Projects/pineapple/PiApplication/DataFiles"           # Where to store the records file, program automatically added '/' at the end
 RECORDFILE_NAME = "DATA_"            # The Base name part of the file
 RECORDFILE_EXT = ".rec"             # The extension for the record files
 RECORDFILE_OLD = ".oldrec"          # The extension used when the record can't be written and is stored for future analysis

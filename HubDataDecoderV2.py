@@ -43,7 +43,7 @@ ZeroPayload = chr(0x00).encode('utf-8')           # used to indicate there is ze
 CONTROL_BYTE = chr(0x00).encode('utf-8')
 
 # The minimum length of any packet, consists of a addresses, command and length byte
-MIN_LENGTH = 12
+MIN_LENGTH = 11
 
 class NODE:
     '''

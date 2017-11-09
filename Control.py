@@ -16,6 +16,8 @@ import logging
 import logging.config
 import dict_LoggingSetup
 import argparse
+from datetime import datetime
+from datetime import timedelta
 
 #BUG: This can only handle 127 bytes, so the data transferred is 
 # This will need to set the HUB address??
@@ -312,7 +314,7 @@ def GetAssociated(lora, decoder):
     """
     #RETRIES outer loop
     retries = SS.RETRIES
-    assocaited = False
+    associated = False
     while associated == False and retries > 0:
         # timer is handed by the LoRa comms layer
         gbl_log.info("[CTRL] Starting association")
