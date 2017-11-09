@@ -196,7 +196,7 @@ def WriteDataToDir(dataset):
 
     #TODO: Need to handle a failure to open the file
     with open(data_record_name, mode='w') as f:
-        json.dump(data_to_write, f)
+        json.dump(dataset, f)
         status = True
     return status
 
@@ -208,8 +208,13 @@ def CheckForData():
     """
 
 #TODO: Need to complete this
-
-    return
+    status = False
+    list_of_files = os.listdir(path=SS.RECORDFILE_LOCATION+'/.')
+    for obj in list_of_files:
+        status = obj.endswith(RECORDFILE_EXT)
+        if status == True:
+            break
+    return status
 
 def SendRecord(lora, decoder, record):
     """
@@ -233,7 +238,7 @@ def SendRecord(lora, decoder, record):
             #TODO: Need a method to validate NODE incoming messages
             if len(reply) > 11:
                 gbl_log.debug("[CTRL] Message received is greater than the miminum length")
-                if reply[10] == chr(0x22).encode('utf-8'):
+                if reply[10] == (0x22):
                     #Data Sent
                     gbl_log.debug("[CTRL] Message received has ACK command byte")
                     data_sent=True
@@ -332,7 +337,7 @@ def GetAssociated(lora, decoder):
             #TODO: Need a method to validate NODE incoming messages
             if len(reply) > 11:
                 gbl_log.debug("[CTRL] Message received is greater than the miminum length")
-                if reply[10] == chr(0x31).encode('utf-8'):
+                if reply[10] == (0x31):
                     #Associated
                     gbl_log.debug("[CTRL] Message received has correct command byte")
                     associated=True
