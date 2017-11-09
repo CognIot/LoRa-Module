@@ -357,9 +357,11 @@ def Hub(op_info):
         decode = Receiver(op_info['hub_addr'], op_info['node_addr'])
         while True:
             message = comms.receive()
+            print("\r\r\r\r\r\r\rWaiting", end="")
             gbl_log.debug("[CTRL] Message received from the comms:%s" % message)
             decode.incoming(message)
             if decode.reply_status:
+                print("\r\r\r\r\r\r\rReading", end="")
                 if decode.reply_payload_len() > 0:
                     WriteDataToDir(decode.reply_payload())
                 status = comms.transmit(decode.reply())

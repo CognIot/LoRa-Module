@@ -43,7 +43,7 @@ ZeroPayload = chr(0x00).encode('utf-8')           # used to indicate there is ze
 CONTROL_BYTE = chr(0x00).encode('utf-8')
 
 # The minimum length of any packet, consists of a addresses, command and length byte
-MIN_LENGTH = 11
+MIN_LENGTH = 12
 
 class NODE:
     '''
@@ -148,7 +148,7 @@ class NODE:
 
     def reply_payload_len(self):
         # The length of the data in the payload
-        return self.payload_len
+        return int.from_bytes(self.payload_len, byteorder='big')
         
     def reply_payload(self):
         # The data that has been sent
@@ -166,6 +166,7 @@ class NODE:
         self.outgoing_message = self.outgoing_message + self.hub + CONTROL_BYTE      # Sender address & Control byte
         self.outgoing_message = self.outgoing_message + self.node + CONTROL_BYTE    # Receiver address & Control byte
         self.outgoing_message = self.outgoing_message + AssociationRequest
+        self.outgoing_message = self.outgoing_message + ZeroPayload
         return self.outgoing_message
 
     def outgoing_DataPack(self, data):
