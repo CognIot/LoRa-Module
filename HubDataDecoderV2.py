@@ -182,7 +182,7 @@ class NODE:
         self.outgoing_message = self.outgoing_message + self.hub + CONTROL_BYTE      # Sender address & Control byte
         self.outgoing_message = self.outgoing_message + self.node + CONTROL_BYTE    # Receiver address & Control byte
         self.outgoing_message = self.outgoing_message + DataPacket
-        self.outgoing_message = self.outgoing_message + chr(packet[data]).encode('utf-8')
+        self.outgoing_message = self.outgoing_message + chr(data).encode('utf-8')
         self.outgoing_message = self.outgoing_message + data.encode('utf-8')
         return self.outgoing_message
 

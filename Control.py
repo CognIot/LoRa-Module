@@ -196,7 +196,8 @@ def WriteDataToDir(dataset):
 
     #TODO: Need to handle a failure to open the file
     with open(data_record_name, mode='w') as f:
-        json.dump(dataset, f)
+        #json.dump(dataset, f)
+        f.write(dataset)        # Debug TEst
         status = True
     return status
 
@@ -206,14 +207,13 @@ def CheckForData():
     """
     Check for files in the directory, return True or False
     """
-
-#TODO: Need to complete this
     status = False
     list_of_files = os.listdir(path=SS.RECORDFILE_LOCATION+'/.')
     for obj in list_of_files:
-        status = obj.endswith(RECORDFILE_EXT)
+        status = obj.endswith(SS.RECORDFILE_EXT)
         if status == True:
             break
+            gbl_log("[CTRL] Status of finding a record with .rec:%s" % status)
     return status
 
 def SendRecord(lora, decoder, record):
@@ -286,10 +286,11 @@ def SendData(lora, decoder):
     list_of_files.sort()
     gbl_log.debug("[CTRL] Files to Use :%s" % list_of_files)
     for record_to_use in list_of_files:
-        gbl_log.debug("[CTRL] File being checked for extension of %s:%s" % (SS.RECORDFILE_EXT, i))
-        if i[-len(SS.RECORDFILE_EXT):] == SS.RECORDFILE_EXT:
-            with open(file_name, mode='r') as f:
-                record = json.load(f)
+        gbl_log.debug("[CTRL] File being checked for extension of %s:%s" % (SS.RECORDFILE_EXT, record_to_use))
+        if record_to_use[-len(SS.RECORDFILE_EXT):] == SS.RECORDFILE_EXT:
+            with open(SS.RECORDFILE_LOCATION+'/'+record_to_use, mode='r') as f:
+                #record = json.load(f)
+                record=f        #TEST
                 #BUG: The line above is reading [] and assuming it is a string and not a list!
                 gbl_log.debug("[CTRL] Record loaded for use:%s" % record)
             
@@ -339,7 +340,7 @@ def GetAssociated(lora, decoder):
                 gbl_log.debug("[CTRL] Message received is greater than the miminum length")
                 if reply[10] == (0x31):
                     #Associated
-                    gbl_log.debug("[CTRL] Message received has correct command byte")
+                    gbl_log.debug("[CTRL] Message received with Assocaition Response - associated")
                     associated=True
                 else:
                     retries = retries - 1
