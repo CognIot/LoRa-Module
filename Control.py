@@ -18,6 +18,7 @@ import dict_LoggingSetup
 import argparse
 from datetime import datetime
 from datetime import timedelta
+import time
 
 #BUG: This can only handle 127 bytes, so the data transferred is 
 # This will need to set the HUB address??
@@ -191,7 +192,7 @@ def WriteDataToDir(dataset):
     #TODO: If the datafile directoryu doesn't exist, an error is thrown!
 
     data_record_name = SS.RECORDFILE_LOCATION + '/' + SS.RECORDFILE_NAME + file_time + SS.RECORDFILE_EXT
-    self.log.info("[DAcc] Writing new record to disk:%s" % data_record_name)
+    gbl_log.info("[DAcc] Writing new record to disk:%s" % data_record_name)
 
     #TODO: Need to handle a failure to open the file
     with open(data_record_name, mode='w') as f:
