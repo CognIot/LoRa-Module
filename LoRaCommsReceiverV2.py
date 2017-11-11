@@ -11,6 +11,8 @@ receive                     returns message received
 exitcomms                   closes comms
 """
 
+#TODO: Change logging to use self.log rather than logging.
+
 import serial
 import logging
 import time
@@ -132,7 +134,15 @@ class LoRaComms:
         self.fd.close()
         return
 
-    ## The functions below here are for internal use within the class only
+#=======================================================================
+#
+#    P R I V A T E   F U N C T I O N S
+#
+#    Not to be Called Directly from outside call
+#
+#=======================================================================
+
+
 
     def _write_to_sp(self, data_to_transmit):
         # Write the given data to the serial port
