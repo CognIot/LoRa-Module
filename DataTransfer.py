@@ -223,7 +223,7 @@ def Hub_Loop(op_info):
         gbl_log.exception("[CTRL] Start reading loop Exception Data")
     return
 
-def GetData():
+def GetRecord():
     """
     Get a file from the directory and return its name and the contents of it
 
@@ -245,9 +245,15 @@ def GetData():
                     record=f.read()        #TEST
                     #BUG: The line above is reading [] and assuming it is a string and not a list!
                     gbl_log.debug("[CTRL] Record loaded for use:%s" % record)
-                
-                    if len(record) > 0:
+
+#BUG: This is looping through and then returning the txt file in the directory!!
+
+                    if len(record) > RECORDFILE_MIN_SIZE:
                         gbl_log.debug("[CTRL] Length of record:%s" % len(record))
+                    else:
+                        record = ''
+                        
+                break
             else:
                 record = ''
     return (record_to_use, record)
@@ -282,7 +288,7 @@ def Node_Loop(op_info):
     gbl_log.info("[CTRL] Starting Node Operation")
     try:
         comms = LoRa()
-        decode = Node(op_info['hub_addr'], op_info['node_addr'])
+        sender = Node(op_info['hub_addr'], op_info['node_addr'])
         retries = SS.RETRIES
         while True:
             # Start the timer
@@ -297,13 +303,13 @@ def Node_Loop(op_info):
                 data_to_send = True
                 while data_to_send:
                     # pass in the data
-                    NODE.data_to_send(data_record)
+                    sender.data_to_send(data_record)
                     # get the message to send
-                    message = NODE.message_to_send
+                    message = sender.message_to_send()
                     gbl_log.info("[CTRL] Message To Send:%s" % message)
                     # send the message
-                    status = LoRa.transmit(message)
-                    gbl_log.info("[CTRL] MEssage Sned Status:%s" % status)
+                    status = comms.transmit(message)
+                    gbl_log.info("[CTRL] Message Send Status:%s" % status)
                     # check the response
                     if status == True:
                         # if good, remove the record
@@ -326,9 +332,9 @@ def Node_Loop(op_info):
 
             else:
                 # get the message to send
-                message = NODE.message_to_send
+                message = sender.message_to_send
                 # send the message
-                status = LoRa.transmit(message)
+                status = comms.transmit(message)
                 # check the response
                 if status == True:
                     retries = SS.RETRIES
