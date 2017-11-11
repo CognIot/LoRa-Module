@@ -288,6 +288,7 @@ def SendData(lora, decoder):
     for record_to_use in list_of_files:
         gbl_log.debug("[CTRL] File being checked for extension of %s:%s" % (SS.RECORDFILE_EXT, record_to_use))
         if record_to_use[-len(SS.RECORDFILE_EXT):] == SS.RECORDFILE_EXT:
+            record_try_count = 0
             with open(SS.RECORDFILE_LOCATION+'/'+record_to_use, mode='r') as f:
                 #record = json.load(f)
                 record=f.read()        #TEST
@@ -404,10 +405,12 @@ def Node(op_info):
 
             if associated == False:
                 associated = GetAssociated(comms, decode)
+                print("\r\r\r\r\r\r\rAssoc'd", end="")
 
             if associated:
                 if CheckForData():
                     # If there is a file to send, send it
+                    print("\r\r\r\r\r\r\rSending", end="")
                     SendData(comms, decode)
 
             # Wait for timeout
