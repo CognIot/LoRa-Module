@@ -330,30 +330,41 @@ class Node:
         #TODO: Track the time it is received
         return
 
-    def data_to_send(self, data):
+    def set_data_to_be_sent(self, data):
         # Pass in data to be sent when required
         # This doesn't send the data, use message_to_send for that
         self.data_to_send = data.encode('utf-8')
+        self.data_sent = True
         return
 
+    def read_data_sent_status(self):
+        # Return the current buffer of the data to be sent
+        return self.data_sent
+
+    def force_reassociation(self):
+        # This will force the message to re-assocaite
+        self.assocaited = False
+        return
+        
 #TODO: Need to tie this method with check_response
-
-
     def message_to_send(self):
         # Decide what message to send and return it
         # If no message to send, return an empty packet
         message = b''
         if self.associated == False:
             message = self._association_request()
+            self.data_sent = False
         else:
             if len(self.data_to_send) > 0:
                 # If there is data to send, send it
                 message = self._data_packet(self.data_to_send)
                 self.data_to_send = b''
+                self.data_sent = True
             else:
                 # If there is no data to send, send a ping
                 #TODO: May need to only send ping sometimes, not everytime we loop round
                 message = self._ping()
+                self.data_sent = False
         return message
 
     def check_response(self, message):
@@ -384,10 +395,19 @@ class Node:
                         self.log.info("[HDD]: Assocation Response Command Received")
                         self.associated = True
                         self.response_status = True
+                    else:
+                        self.log.ingfo("[HDD] Message received not association response for a non assocaited Node")
+                        self.associated = False
+                        self.response_status = False
             else:
                 # Data is not valid
                 self.log.info("[HDD]: Message received is invalid")
                 self.response_status = False
+        else:
+            # Unable to Decode the message
+            self.log.info("[HDD]: Unable to Decode the message, message is invalid")
+            self.response_status = False
+        
         return self.response_status
 
     #TODO: Need to also deal with a failure in the LoRa comms, as maybe worth sending some other response.
@@ -404,6 +424,42 @@ class Node:
 #
 #=======================================================================
 
+    def _validated(self):
+        # Routine to check the incoming packet is valid and for this instance of the NODE
+            #TODO: Need to validate the packet, but what??
+        if self.node != self.node_addr:
+            self.log.info("[HDD]: Message Validation: Incorrect Node Address")
+            return False
+        elif self.hub != self.hub_addr:
+            self.log.info("[HDD]: Message Validation: Incorrect Hub Address")
+            return False
+        elif self.hub_control != CONTROL_BYTE or self.node_control != CONTROL_BYTE:
+            self.log.info("[HDD]: Message Validation: Incorrect Control Byte")
+            return False
+        return True
+
+    def _split_message(self, packet):
+        # This routine takes the packet and splits it into its constituent parts
+        # Returns True if successful, False if fails
+        status = False
+        if len(packet) >= MIN_LENGTH:
+            self.hub_addr = packet[START_HUB_ADDR:HUB_CONTROL_BYTE]
+            self.hub_control = chr(packet[HUB_CONTROL_BYTE]).encode('utf-8')
+            self.node_addr = packet[START_NODE_ADDR:NODE_CONTROL_BYTE]
+            self.node_control = chr(packet[NODE_CONTROL_BYTE]).encode('utf-8')
+            self.command = chr(packet[COMMAND]).encode('utf-8')
+            self.payload_len = chr(packet[PAYLOAD_LEN]).encode('utf-8')
+            if len(packet) > PAYLOAD:
+                # Onlyadd the payload if the length is longer than then minimum length
+                self.payload = packet[PAYLOAD:]
+            status = True
+        self.log.debug("[HDD]: Hub Address    :%s" % self.hub_addr)
+        self.log.debug("[HDD]: Node Address   :%s" % self.node_addr)
+        self.log.debug("[HDD]: Command byte   :%s" % self.command)
+        self.log.debug("[HDD]: Payload Length :%s" % self.payload_len)
+        self.log.debug("[HDD]: Payload        :%s" % self.payload)
+        return status
+        
     def _reset_values(self):
         # These are from the contents of the message, clear them all when processing the message 
         self.hub_addr = b''         # The address of the hub in the message
@@ -431,6 +487,7 @@ class Node:
         packet_to_send = packet_to_send + self.node + CONTROL_BYTE    # Receiver address & Control byte
         packet_to_send = packet_to_send + AssociationRequest
         packet_to_send = packet_to_send + ZeroPayload
+        self.log.debug("[HDD] Assocation Request Message:%s" % packet_to_send)
         return packet_to_send
 
     def _data_packet(self, data):
@@ -448,6 +505,7 @@ class Node:
         packet_to_send = packet_to_send + DataPacket
         packet_to_send = packet_to_send + str(len(data)).encode('utf-8')
         packet_to_send = packet_to_send + data.encode('utf-8')
+        self.log.debug("[HDD] Data Packet Message:%s" % packet_to_send)
         return packet_to_send
 
     def _ping(self):
@@ -461,7 +519,7 @@ class Node:
         packet_to_send = packet_to_send + self.node + CONTROL_BYTE    # Receiver address & Control byte
         packet_to_send = packet_to_send + Ping
         packet_to_send = packet_to_send + ZeroPayload
-
+        self.log.debug("[HDD] Ping Message:%s" % packet_to_send)
         packet_to_send       # contains the message to be sent back
         return packet_to_send
 

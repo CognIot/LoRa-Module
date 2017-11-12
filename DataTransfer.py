@@ -223,6 +223,17 @@ def Hub_Loop(op_info):
         gbl_log.exception("[CTRL] Start reading loop Exception Data")
     return
 
+def ValidateRecord(contents):
+    """
+    Check the contents of the record open are valid and contain the right information
+    If the record is good, return True, else return False
+    """
+    status = True
+    if len(contents) < SS.RECORDFILE_MIN_SIZE or len(contents) > SS.RECORDFILE_MAX_SIZE:
+        status = False
+    #TODO: Add other checks for validation
+    return status
+
 def GetRecord():
     """
     Get a file from the directory and return its name and the contents of it
@@ -240,22 +251,18 @@ def GetRecord():
         for record_to_use in list_of_files:
             gbl_log.debug("[CTRL] File being checked for extension of %s:%s" % (SS.RECORDFILE_EXT, record_to_use))
             if record_to_use.endswith(SS.RECORDFILE_EXT):
+                gbl_log.debug("[CTRL] Record Selected for use:%s" % record_to_use)
+
                 with open(SS.RECORDFILE_LOCATION+'/'+record_to_use, mode='r') as f:
                     #record = json.load(f)
                     record=f.read()        #TEST
-                    #BUG: The line above is reading [] and assuming it is a string and not a list!
                     gbl_log.debug("[CTRL] Record loaded for use:%s" % record)
-
-#BUG: This is looping through and then returning the txt file in the directory!!
-
-                    if len(record) > RECORDFILE_MIN_SIZE:
-                        gbl_log.debug("[CTRL] Length of record:%s" % len(record))
-                    else:
-                        record = ''
-                        
-                break
-            else:
-                record = ''
+                if ValidateRecord(record):
+                    # The record is good and therefore I need to exit
+                    break
+                else:
+                    # The file is not valid and therefore is moved to the archive list
+                    RenameRecordFile(record_to_use)
     return (record_to_use, record)
 
 def RemoveRecordFile(record_to_remove):
@@ -281,7 +288,7 @@ def RenameRecordFile(record_to_rename):
         gbl_log.info("[DAcc] Record File NOT renamed:%s" % SS.RECORDFILE_LOCATION+'/' + record_to_rename[-3:] + SS.RECORDFILE_OLD)
     return
     
-def Node_Loop(op_info):
+def Node_Loop_old(op_info):
     """
     Perform the necessary functions to act as a node.
     """
@@ -303,14 +310,18 @@ def Node_Loop(op_info):
                 data_to_send = True
                 while data_to_send:
                     # pass in the data
-                    sender.data_to_send(data_record)
+                    sender.data_to_be_sent(data_record)
                     # get the message to send
                     message = sender.message_to_send()
                     gbl_log.info("[CTRL] Message To Send:%s" % message)
                     # send the message
                     status = comms.transmit(message)
                     gbl_log.info("[CTRL] Message Send Status:%s" % status)
-                    # check the response
+                    # get and check the response
+                    reply = comms.receivetimeout(SS.REPLY_WAIT)
+                    gbl_log.info("[CTRL] Message Reply:%s" % reply)
+                    status = sender.check_response(reply)
+                    gbl_log.info("[CTRL] Message Reply Status:%s" % status)
                     if status == True:
                         # if good, remove the record
                         RemoveRecordFile(record_name)
@@ -323,12 +334,13 @@ def Node_Loop(op_info):
                             data_to_send = False
                     else:
                         # else drop out but increase the retries count.
+                        gbl_log.debug("[CTRL] Response status is negative, checking fo retry count")
                         retries = retries - 1
                         if retries == 0:
-                            # if retries count has run out, rename the record
-                            RenameRecordFile(record_name)
+                            # Stop attempting to send the file and break out of the overall loop
+                            data_to_send = False
                         else:
-                            time.sleep(record_try_count)        # Wait for a period before retrying
+                            time.sleep(retries)        # Wait for a period before retrying
 
             else:
                 # get the message to send
@@ -381,6 +393,100 @@ If not responded within time, reset to not Associated / resend the command
 
 
 '''
+def Node_Loop(op_info):
+    """
+    Perform the necessary functions to act as a node.
+    """
+    gbl_log.info("[CTRL] Starting Node Operation")
+    try:
+        comms = LoRa()
+        sender = Node(op_info['hub_addr'], op_info['node_addr'])
+        retries = SS.RETRIES
+        data_to_send = False
+
+        """
+        if data_to_send == False:
+            record_name, data_record = GetRecord()
+            gbl_log.info("[CTRL] Record to send >%s< and its contents:%s" % ( record_name, data_record))
+            if len(data_record) > 0:
+                # pass in the data
+                sender.set_data_to_be_sent(data_record)
+                data_to_send = True
+            else:
+                data_to_send = False
+        """
+        while True:
+            # Start the timer
+            endtime = datetime.now() + timedelta(seconds=op_info['dir_read_freq'])
+            print("\r\r\r\r\r\r\rReading", end="")
+
+            # Loop round to get data and send it
+
+            # get the message to send
+            message = sender.message_to_send()
+            gbl_log.info("[CTRL] Message To Send:%s" % message)
+            # send the message
+            status = comms.transmit(message)
+            gbl_log.info("[CTRL] Message Send Status:%s" % status)
+            # get and check the response
+            reply = comms.receivetimeout(SS.REPLY_WAIT)
+            gbl_log.info("[CTRL] Message Reply:%s" % reply)
+            status = sender.check_response(reply)
+            gbl_log.info("[CTRL] Message Reply Status:%s" % status)
+            if status == True:
+                retries = SS.RETRIES
+                if data_to_send == True and sender.data_sent_status():
+                    # if good, remove the record
+                    RemoveRecordFile(record_name)
+                    # check for more data
+                record_name, data_record = GetRecord()
+                if len(data_record) > 0:
+                    sender.set_data_to_be_sent(data_record)
+                    data_to_send = True
+                else:
+                    data_to_send = False
+            else:
+                # else drop out but increase the retries count.
+                gbl_log.debug("[CTRL] Response status is negative, checking fo retry count")
+                retries = retries - 1
+                if retries == 0:
+                    # Stop attempting to send the file and break out of the overall loop
+                    data_to_send = False
+                    sender.force_reassociation()
+                    retries = SS.RETRIES
+                else:
+                    time.sleep(retries)        # Wait for a period before retrying
+
+            if data_to_send == False:
+                # Only have a delay if there is no data to send
+                # Wait for timeout
+                waiting = False
+                while endtime > datetime.now():
+                    if waiting == False:
+                        print("\r\r\r\r\r\r\rWaiting", end="")
+                        gbl_log.debug("[CTRL] Waiting for timeout to complete")
+                        waiting=True
+                    # Use time.sleep to wait without processor burn at 25%
+                    sleep = datetime.now() - endtime
+                    if sleep.total_seconds() > 2:
+                        time.sleep(sleep.total_seconds() - 0.1)
+                    else:
+                        time.sleep(0.1)
+        
+    except KeyboardInterrupt:
+        # CTRL - C entered
+        print(" CTRL-C entered")
+        gbl_log.debug("[CTRL] User Interrupt occurred (Ctrl-C)")
+        gbl_log.info("[CTRL] End of Processing")
+
+        #TODO: Need to add in some functionality here to stop the sensor.
+    except:
+        #Error occurrred
+        gbl_log.critical("[CTRL] Error occurred whilst looping to read values")
+        print("\nCRITICAL ERROR during rading of sensor values- contact Support\n")
+        gbl_log.exception("[CTRL] Start reading loop Exception Data")
+
+    return
 
 def main():
     # The main program that calls all the necessary routines for the rest.

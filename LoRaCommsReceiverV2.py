@@ -294,7 +294,7 @@ class LoRaComms:
         status = 0
         endtime = datetime.now() + timedelta(seconds=waittime)
         timeout = False
-        while(status!=1) or timeout == True:
+        while (status==0) and timeout == False:
             status = GPIO.input(INPUT_PIN)
             if datetime.now() > endtime:
                 timeout=True
