@@ -189,6 +189,34 @@ def SaveOperationalInfo(op_info):
 
     return
 
+def WriteDataToDir(dataset):
+    """
+    Write the given data to the operational directory
+    Takes the given data and creates a new file with the contents of it
+    Format of the filename is based on standard settings
+        RECORDFILE_NAME+timestamp+RECORDFILE_EXT
+    Stored in sub folder
+        RECORDFILE_LOCATION
+    Returns true if the record is written, or false if it isn't
+    Disk space management is handled by the calling program
+    """
+    status = False
+    file_time = datetime.now().strftime("%y%m%d%H%M%S-%f")
+
+    #TODO: If the datafile directoryu doesn't exist, an error is thrown!
+
+    data_record_name = SS.RECORDFILE_LOCATION + '/' + SS.RECORDFILE_NAME + file_time + SS.RECORDFILE_EXT
+    gbl_log.info("[DAcc] Writing new record to disk:%s" % data_record_name)
+
+    #TODO: Need to handle a failure to open the file
+    with open(data_record_name, mode='w') as f:
+        #json.dump(dataset, f)
+        f.write(dataset.decode('utf-8'))        # Debug TEst
+        status = True
+    return status
+
+    return
+
 def Hub_Loop(op_info):
     """
     Perform the necessary functionality to operate as a Hub

@@ -452,8 +452,6 @@ class Node:
     def _association_request(self):
         # Prepare an Associate message to send
         # return the message to be sent
-        #TODO: Hub becomes receiver HUB - RECEIVER
-        #TODO: Node becomes sender  NODE - SENDER
 
         packet_to_send = b''
         packet_to_send = packet_to_send + self.hub + CONTROL_BYTE      # Sender address & Control byte
@@ -468,25 +466,19 @@ class Node:
         # Data is supplied as a string
         # return the message to be sent
 
-        # build the packet here using things like
-        #self.hub, self.node, CONTROL_BYTE, 
-        #TODO: Hub becomes receiver HUB - RECEIVER
-        #TODO: Node becomes sender  NODE - SENDER
         packet_to_send = b''
         packet_to_send = packet_to_send + self.hub + CONTROL_BYTE      # Sender address & Control byte
         packet_to_send = packet_to_send + self.node + CONTROL_BYTE    # Receiver address & Control byte
         packet_to_send = packet_to_send + DATAPACKET
         packet_to_send = packet_to_send + str(len(data)).encode('utf-8')
-        packet_to_send = packet_to_send + data.encode('utf-8')
+        packet_to_send = packet_to_send + data
         self.log.debug("[HDD] Data Packet Message:%s" % packet_to_send)
         return packet_to_send
 
     def _ping(self):
         # Prepare a Data Packet message to send the ping
         # return the message to be sent
-        # build the packet here using things like
-        #TODO: Hub becomes receiver HUB - RECEIVER
-        #TODO: Node becomes sender  NODE - SENDER
+
         packet_to_send = b''
         packet_to_send = packet_to_send + self.hub + CONTROL_BYTE      # Sender address & Control byte
         packet_to_send = packet_to_send + self.node + CONTROL_BYTE    # Receiver address & Control byte
