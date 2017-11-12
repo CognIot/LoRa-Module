@@ -463,7 +463,7 @@ def Node_Loop(op_info):
             gbl_log.info("[CTRL] Message Reply Status:%s" % status)
             if status == True:
                 retries = SS.RETRIES
-                if data_to_send == True and sender.data_sent_status():
+                if data_to_send == True and sender.read_data_sent_status():
                     # if good, remove the record
                     RemoveRecordFile(record_name)
                     # check for more data
