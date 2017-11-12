@@ -400,7 +400,7 @@ def Node_Loop(op_info):
     gbl_log.info("[CTRL] Starting Node Operation")
     try:
         comms = LoRa()
-        sender = Node(op_info['hub_addr'], op_info['node_addr'])
+        sender = Node(op_info['node_addr'], op_info['hub_addr'])
         retries = SS.RETRIES
         data_to_send = False
 
