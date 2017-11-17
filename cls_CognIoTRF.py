@@ -288,11 +288,13 @@ class Hub:
                 # Onlyadd the payload if the length is longer than then minimum length
                 self.payload = packet[PAYLOAD:]
             status = True
-        self.log.debug("[HDD]: Destination Address  :%s" % self.dest_addr)
-        self.log.debug("[HDD]: Source Address       :%s" % self.src_addr)
-        self.log.debug("[HDD]: Command byte         :%s" % self.command)
-        self.log.debug("[HDD]: Payload Length       :%s" % self.payload_len)
-        self.log.debug("[HDD]: Payload              :%s" % self.payload)
+            self.log.debug("[HDD]: Destination Address  :%s" % self.dest_addr)
+            self.log.debug("[HDD]: Source Address       :%s" % self.src_addr)
+            self.log.debug("[HDD]: Command byte         :%s" % self.command)
+            self.log.debug("[HDD]: Payload Length       :%s" % self.payload_len)
+            self.log.debug("[HDD]: Payload              :%s" % self.payload)
+        else:
+            self.log.debug("[HDD]: Unable to split message")
         return status
 
 
@@ -366,6 +368,7 @@ class Node:
     def check_response(self, message):
         # After sending a message, check the response.
         # Return a status if it is successful
+        self._reset_values ()
         if self._split_message(message):
             if self._validated():
                 self.log.info("[HDD]: Message is valid ")
