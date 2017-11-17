@@ -84,7 +84,7 @@ class SubHub:
 
         return
 
-    def message_response(self, command):
+    def message_response(self, command, message):
         """
         Taking the given message, determine the response
         """
@@ -197,7 +197,7 @@ class Hub:
             if self._validated():
                 self.log.info("[HDD]: Message is valid ")
                 if self.nodes[self.src_addr] == '':
-                    self.nodes[self.src_addr] = SubHub(self.src_addr, self.dest_addr)
+                    self.nodes[self.src_addr] = SubHub(self.src_addr, self.dest_addr, message)
                     # If the node has not already been communicated with, create instance
                 (self.response, self.response_status) = self.nodes[self.src_addr].message_response(self.command)
                 #TODO: Need to call the SubHub class instance here
