@@ -184,7 +184,7 @@ class Hub:
         for i in nodes:
             self.nodes[i.encode('utf-8')] = ''       # A dictionary of the Nodes that the instance supports
         self.hub = hub.encode('utf-8')          # The Hub address in use
-        self.log.info("[HDD]: HUB class instantiated with node:%s, hub:%s" % (self.node, self.hub))
+        self.log.info("[HDD]: HUB class instantiated with node:%s, hub:%s" % (self.nodes, self.hub))
         self._reset_values()
         return
         
