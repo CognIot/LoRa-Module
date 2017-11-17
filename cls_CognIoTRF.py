@@ -55,7 +55,6 @@ class Common:
     """
     This class contains methods that are used by both Hub and Node
 
-    Not called independtly
     """
 
     def __init__(self):
@@ -65,19 +64,126 @@ class Common:
         return
 
 
+class SubHub:
+    """
+    Provides the individual functionality for each node connected to the hub
+
+    Not called directly, but from Hub
+    """
+
+    def __init__(self, node, hub):
+        self.log = logging.getLogger()
+        self.node = node            # Already been encoded by the Hub class
+        self.hub = hub
+        self.associated = False
+        self.response = b''
+        self.response_status = False
+        self.last_incoming_message = b''
+        return
+
+    def message_response(self, command):
+        """
+        Taking the given message, determine the response
+        """
+        self.command = command
+        if self.associated:
+            # Possible commands are data packet and ping (if associated)
+            self.log.info("[HDD]: HUB <==> NODE are associated")
+            if self.command == PING:
+                # Send the Ping response
+                self.log.info("[HDD]: Ping Command Received")
+
+                #TODO: Need to include the ability to send data back in the ping response
+                self.response = self._generate_ack()
+                self.response_status = True
+            elif self.command == DATAPACKET:
+                # Send an Acknowledge
+                self.log.info("[HDD]: Data Packet Command Received")
+                if message == self.last_incoming_message:
+                    self._display_message("RECV: Duplicate Packet Seen")
+                    self.log.info("[HDD]: Duplicate Data Packet Received")
+                else:
+                    self.last_incoming_message = message
+                    self.response = self._generate_ack()
+                    self.response_status = True
+            elif self.command == ASSOCIATIONREQUEST:
+                # send Association Response again
+                self.log.info("[HDD]: Association Request Command Received")
+                self.response = self._association_response()
+                self.response_status = True
+            else:
+                self.log.info("[HDD]: Unknown Command Received")
+                self.response = self._generate_nack()
+                self.response_status = True
+        else:
+            # Possible commands are association request
+            self.log.info("[HDD]: HUB & NODE are NOT associated")
+            if self.command == ASSOCIATIONREQUEST:
+                # send Association Response
+                self.log.info("[HDD]: Association Request Command Received")
+                self.response = self._association_response()
+                self.response_status = True
+                # TODO: Need to do further checks before associated = True? maybe.
+                self.associated = True
+        return (self.response, self.response_status)
+
+        
+    def _association_response(self):
+        # Create a generic generates an Ack for response to a number of messages
+        packet_to_send = b''
+        packet_to_send = packet_to_send + self.node + CONTROL_BYTE    # Receiver address & Control byte
+        packet_to_send = packet_to_send + self.hub + CONTROL_BYTE      # Sender address & Control byte
+        packet_to_send = packet_to_send + ASSOCIATIONRESPONSE                   # Association Response
+        packet_to_send = packet_to_send + ZeroPayload                           # add zero payload length
+
+        self._display_message("SEND: Association Response")
+        return packet_to_send
+    
+    def _generate_ack(self):
+        # Create a generic generates an Ack for response to a number of messages
+        packet_to_send = b''
+        packet_to_send = packet_to_send + self.node + CONTROL_BYTE    # Receiver address & Control byte
+        packet_to_send = packet_to_send + self.hub + CONTROL_BYTE      # Sender address & Control byte
+        packet_to_send = packet_to_send + ACK                                   # Acknowledge
+        packet_to_send = packet_to_send + ZeroPayload                           # add zero payload length
+
+        self._display_message("SEND: Acknowledge")
+        return packet_to_send
+    
+    def _generate_nack(self):
+        # Create a generic Nack for response to a number of messages
+        # No additional decoding of Nack is completed.
+        packet_to_send = b''
+        packet_to_send = packet_to_send + self.node + CONTROL_BYTE    # Receiver address & Control byte
+        packet_to_send = packet_to_send + self.hub + CONTROL_BYTE      # Sender address & Control byte
+        packet_to_send = packet_to_send + NACK                                  # Acknowledge
+        packet_to_send = packet_to_send + ZeroPayload                           # add zero payload length
+
+        self._display_message("SEND: Negative Response")
+        return packet_to_send
+    
+    def _display_message(self, prompt):
+        # Takes the current packet being processed and splits it onto the screen / log file
+        #print("Message %s" % prompt)
+        self.log.info("Message %s" % prompt)
+        #print("Host:%s Hub:%s Node:%s CMD:%s LEN:%s PAY:%s\n" % (self.hub, self.hub_addr, self.node_addr, self.command, self.payload_len, self.payload))
+        self.log.info("Host:%s Dest:%s Src:%s CMD:%s LEN:%s PAY:%s" % (self.hub, self.dest_addr, self.src_addr, self.command, self.payload_len, self.payload))
+        return
+
+
+
 class Hub:
     """
     Provides the methods for Hub operation
     """
-    def __init__(self, hub, node):
+    def __init__(self, hub, nodes):
         # node and hub are normal strings passed in that are converted to binary mode
         self.log = logging.getLogger()
         self.log.debug("[HDD] cls_CognIoTRF HUB initialised")
-
-        self.associated = False                 # USed to indicate if the Hub is associated
-        self.node = node.encode('utf-8')        # The Node address that the instance supports
+        self.nodes = {}
+        for i in nodes:
+            self.nodes[i.encode('utf-8')] = ''       # A dictionary of the Nodes that the instance supports
         self.hub = hub.encode('utf-8')          # The Hub address in use
-        self.last_incoming_message = b''        # Set to the last valid packet
         self.log.info("[HDD]: HUB class instantiated with node:%s, hub:%s" % (self.node, self.hub))
         self._reset_values()
         return
@@ -95,45 +201,11 @@ class Hub:
             self.time_packet_received = time.time()
             if self._validated():
                 self.log.info("[HDD]: Message is valid ")
-                if self.associated:
-                    # Possible commands are data packet and ping (if associated)
-                    self.log.info("[HDD]: HUB <==> NODE are associated")
-                    if self.command == PING:
-                        # Send the Ping response
-                        self.log.info("[HDD]: Ping Command Received")
-
-                        #TODO: Need to include the ability to send data back in the ping response
-                        self.response = self._generate_ack()
-                        self.response_status = True
-                    elif self.command == DATAPACKET:
-                        # Send an Acknowledge
-                        self.log.info("[HDD]: Data Packet Command Received")
-                        if message == self.last_incoming_message:
-                            self._display_message("RECV: Duplicate Packet Seen")
-                            self.log.info("[HDD]: Duplicate Data Packet Received")
-                        else:
-                            self.last_incoming_message = message
-                            self.response = self._generate_ack()
-                            self.response_status = True
-                    elif self.command == ASSOCIATIONREQUEST:
-                        # send Association Response again
-                        self.log.info("[HDD]: Association Request Command Received")
-                        self.response = self._association_response()
-                        self.response_status = True
-                    else:
-                        self.log.info("[HDD]: Unknown Command Received")
-                        self.response = self._generate_nack()
-                        self.response_status = True
-                else:
-                    # Possible commands are association request
-                    self.log.info("[HDD]: HUB & NODE are NOT associated")
-                    if self.command == ASSOCIATIONREQUEST:
-                        # send Association Response
-                        self.log.info("[HDD]: Association Request Command Received")
-                        self.response = self._association_response()
-                        self.response_status = True
-                        # TODO: Need to do further checks before associated = True? maybe.
-                        self.associated = True
+                if self.nodes[self.src_addr] == '':
+                    self.nodes[self.src_addr] = SubHub(self.src_addr, self.dest_addr)
+                    # If the node has not already been communicated with, create instance
+                (self.response, self.response.status) = self.nodes(self.src_addr).message_response(self.command)
+                #TODO: Need to call the SubHub class instance here
             else:
                 # Data is not valid
                 self.log.info("[HDD]: Message received is invalid")
@@ -179,7 +251,8 @@ class Hub:
         if self.hub != self.dest_addr:
             self.log.info("[HDD]: Message Validation: Incorrect Destination Address, doesn't match hub")
             return False
-        elif self.node != self.src_addr:
+        elif self.src_addr not in self.nodes:
+            # If the source address is not in the list of nodes
             self.log.info("[HDD]: Message Validation: Incorrect Source Address, doesn't match node")
             return False
         elif self.src_control != CONTROL_BYTE or self.dest_control != CONTROL_BYTE:
@@ -226,48 +299,7 @@ class Hub:
         self.log.debug("[HDD]: Payload Length       :%s" % self.payload_len)
         self.log.debug("[HDD]: Payload              :%s" % self.payload)
         return status
-        
-    def _association_response(self):
-        # Create a generic generates an Ack for response to a number of messages
-        packet_to_send = b''
-        packet_to_send = packet_to_send + self.node + CONTROL_BYTE    # Receiver address & Control byte
-        packet_to_send = packet_to_send + self.hub + CONTROL_BYTE      # Sender address & Control byte
-        packet_to_send = packet_to_send + ASSOCIATIONRESPONSE                   # Association Response
-        packet_to_send = packet_to_send + ZeroPayload                           # add zero payload length
 
-        self._display_message("SEND: Association Response")
-        return packet_to_send
-    
-    def _generate_ack(self):
-        # Create a generic generates an Ack for response to a number of messages
-        packet_to_send = b''
-        packet_to_send = packet_to_send + self.node + CONTROL_BYTE    # Receiver address & Control byte
-        packet_to_send = packet_to_send + self.hub + CONTROL_BYTE      # Sender address & Control byte
-        packet_to_send = packet_to_send + ACK                                   # Acknowledge
-        packet_to_send = packet_to_send + ZeroPayload                           # add zero payload length
-
-        self._display_message("SEND: Acknowledge")
-        return packet_to_send
-    
-    def _generate_nack(self):
-        # Create a generic Nack for response to a number of messages
-        # No additional decoding of Nack is completed.
-        packet_to_send = b''
-        packet_to_send = packet_to_send + self.node + CONTROL_BYTE    # Receiver address & Control byte
-        packet_to_send = packet_to_send + self.hub + CONTROL_BYTE      # Sender address & Control byte
-        packet_to_send = packet_to_send + NACK                                  # Acknowledge
-        packet_to_send = packet_to_send + ZeroPayload                           # add zero payload length
-
-        self._display_message("SEND: Negative Response")
-        return packet_to_send
-    
-    def _display_message(self, prompt):
-        # Takes the current packet being processed and splits it onto the screen / log file
-        #print("Message %s" % prompt)
-        self.log.info("Message %s" % prompt)
-        #print("Host:%s Hub:%s Node:%s CMD:%s LEN:%s PAY:%s\n" % (self.hub, self.hub_addr, self.node_addr, self.command, self.payload_len, self.payload))
-        self.log.info("Host:%s Dest:%s Src:%s CMD:%s LEN:%s PAY:%s" % (self.hub, self.dest_addr, self.src_addr, self.command, self.payload_len, self.payload))
-        return
 
 class Node:
     """
