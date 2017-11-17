@@ -80,7 +80,7 @@ class SubHub:
         self.response = b''
         self.response_status = False
         self.last_incoming_message = b''
-        self.log.info("[HDD]: SubHub class instantiated with node:%s, hub:%s" % (self.nodes, self.hub))
+        self.log.info("[HDD]: SubHub class instantiated with node:%s, hub:%s" % (self.node, self.hub))
 
         return
 
