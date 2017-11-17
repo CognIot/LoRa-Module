@@ -199,7 +199,7 @@ class Hub:
                 if self.nodes[self.src_addr] == '':
                     self.nodes[self.src_addr] = SubHub(self.src_addr, self.dest_addr)
                     # If the node has not already been communicated with, create instance
-                (self.response, self.response.status) = self.nodes[self.src_addr].message_response(self.command)
+                (self.response, self.response_status) = self.nodes[self.src_addr].message_response(self.command)
                 #TODO: Need to call the SubHub class instance here
             else:
                 # Data is not valid
