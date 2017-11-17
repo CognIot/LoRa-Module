@@ -73,12 +73,15 @@ class SubHub:
 
     def __init__(self, node, hub):
         self.log = logging.getLogger()
+        self.log.info("[HDD] cls_CognIoT SubHub initialised")
         self.node = node            # Already been encoded by the Hub class
         self.hub = hub
         self.associated = False
         self.response = b''
         self.response_status = False
         self.last_incoming_message = b''
+        self.log.info("[HDD]: SubHub class instantiated with node:%s, hub:%s" % (self.nodes, self.hub))
+
         return
 
     def message_response(self, command):
@@ -136,7 +139,7 @@ class SubHub:
         packet_to_send = packet_to_send + ASSOCIATIONRESPONSE                   # Association Response
         packet_to_send = packet_to_send + ZeroPayload                           # add zero payload length
 
-        self._display_message("SEND: Association Response")
+        self.log.info("SEND: Association Response")
         return packet_to_send
     
     def _generate_ack(self):
@@ -147,7 +150,7 @@ class SubHub:
         packet_to_send = packet_to_send + ACK                                   # Acknowledge
         packet_to_send = packet_to_send + ZeroPayload                           # add zero payload length
 
-        self._display_message("SEND: Acknowledge")
+        self.log.info("SEND: Acknowledge")
         return packet_to_send
     
     def _generate_nack(self):
@@ -159,16 +162,8 @@ class SubHub:
         packet_to_send = packet_to_send + NACK                                  # Acknowledge
         packet_to_send = packet_to_send + ZeroPayload                           # add zero payload length
 
-        self._display_message("SEND: Negative Response")
+        self.log.info("SEND: Negative Response")
         return packet_to_send
-    
-    def _display_message(self, prompt):
-        # Takes the current packet being processed and splits it onto the screen / log file
-        #print("Message %s" % prompt)
-        self.log.info("Message %s" % prompt)
-        #print("Host:%s Hub:%s Node:%s CMD:%s LEN:%s PAY:%s\n" % (self.hub, self.hub_addr, self.node_addr, self.command, self.payload_len, self.payload))
-        self.log.info("Host:%s Dest:%s Src:%s CMD:%s LEN:%s PAY:%s" % (self.hub, self.dest_addr, self.src_addr, self.command, self.payload_len, self.payload))
-        return
 
 
 
