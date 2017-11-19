@@ -230,10 +230,11 @@ def Hub_Loop(op_info):
             print("\r\r\r\r\r\r\rWaiting", end="")
             gbl_log.debug("[CTRL] Message received from the comms:%s" % message)
             decode.decode_and_respond(message)
-            if decode.reply_status:
+            if decode.reply_status():
                 print("\r\r\r\r\r\r\rReading", end="")
-                self.log.debug("[CTRL] response is valid:%s" % decode.reply_status)
+                gbl_log.debug("[CTRL] response is valid:%s" % decode.reply_status())
                 if decode.reply_payload_len() > 0:
+                    gbl_log.debug("[CTRL] response length is:%s" % decode.reply_payload_len())
                     WriteDataToDir(decode.reply_payload())
                 status = comms.transmit(decode.reply())
                 #TODO: Add some capability to retry if failure
