@@ -333,7 +333,7 @@ class Node:
     def set_data_to_be_sent(self, data):
         # Pass in data to be sent when required
         # This doesn't send the data, use message_to_send for that
-        if len(data) < MAX_PAYLOAD_LEN:
+        if len(data) > MAX_PAYLOAD_LEN:
             self.log.info("[HDD] message received is longer than allowed, length:%s, message cropped" % len(data))
             self.data_to_send = data.encode('utf-8')[:MAX_PAYLOAD_LEN]
         else:
