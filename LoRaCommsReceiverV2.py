@@ -12,6 +12,9 @@ exitcomms                   closes comms
 """
 
 #TODO: Change logging to use self.log rather than logging.
+#          self.log = getLogger()
+
+#TODO: Improve peroformance. Currently waits for 1s to send a message, due to using readall, rather than read specific length
 
 import serial
 import logging
