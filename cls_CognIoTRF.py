@@ -49,6 +49,9 @@ CONTROL_BYTE = chr(0x00).encode('utf-8')
 # The minimum length of any packet, consists of a addresses, command and length byte
 MIN_LENGTH = 12
 
+# The maximum payload length to be handled
+MAX_PAYLOAD_LEN = 127
+
 #TODO: Convert 'utf-8' to a fixed variable
 
 class Common:
@@ -330,8 +333,13 @@ class Node:
     def set_data_to_be_sent(self, data):
         # Pass in data to be sent when required
         # This doesn't send the data, use message_to_send for that
-        self.data_to_send = data.encode('utf-8')
-        self.data_sent = True
+        if len(data) < MAX_PAYLOAD_LEN:
+            self.log.info("[HDD] message received is longer than allowed, length:%s, message cropped" % len(data))
+            self.data_to_send = data.encode('utf-8')[:MAX_PAYLOAD_LEN]
+        else:
+            self.data_to_send = data.encode('utf-8')
+        
+        self.data_sent = False
         return
 
     def read_data_sent_status(self):
@@ -499,7 +507,7 @@ class Node:
         packet_to_send = packet_to_send + self.hub + CONTROL_BYTE      # Sender address & Control byte
         packet_to_send = packet_to_send + self.node + CONTROL_BYTE    # Receiver address & Control byte
         packet_to_send = packet_to_send + DATAPACKET
-        packet_to_send = packet_to_send + str(len(data)).encode('utf-8')
+        packet_to_send = packet_to_send + len(data).to_bytes(1, byteorder='big', signed=False)      # old was 'str(len(data)).encode('utf-8')'
         packet_to_send = packet_to_send + data
         self.log.debug("[HDD] Data Packet Message:%s" % packet_to_send)
         return packet_to_send
