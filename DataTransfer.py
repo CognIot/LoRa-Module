@@ -232,6 +232,7 @@ def Hub_Loop(op_info):
             decode.decode_and_respond(message)
             if decode.reply_status:
                 print("\r\r\r\r\r\r\rReading", end="")
+                self.log.debug("[CTRL] response is valid:%s" % decode.reply_status)
                 if decode.reply_payload_len() > 0:
                     WriteDataToDir(decode.reply_payload())
                 status = comms.transmit(decode.reply())

@@ -103,7 +103,6 @@ class SubHub:
                 # Send an Acknowledge
                 self.log.info("[HDD]: Data Packet Command Received")
                 if message == self.last_incoming_message:
-                    self._display_message("RECV: Duplicate Packet Seen")
                     self.log.info("[HDD]: Duplicate Data Packet Received")
                 else:
                     self.last_incoming_message = message
