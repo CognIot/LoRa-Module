@@ -91,15 +91,22 @@ class LoRaComms:
             return False
 
         # Message to send is AT+X plus a space plus the length in 2 char hex, all encoded in binary string format
+        # Expect to get \r\n$ back to then send the data
         to_send = SENDB + b' ' + format(len(message), '02X').encode('utf-8')
         reply = self._write_to_sp(to_send)
         if reply > 0:
-            reply = self._read_from_sp()
+            reply = self._read_from_sp(3)       # MB: Added 3 to improve performance, expect \r\n$ as reply
             if self._check_for_dollar(reply):
                 if self._write_to_sp(message) > 0:
-                    reply = self._read_from_sp()
+                    reply = self._read_from_sp(7)       # MB: Added 7 as expected response '\r\nOK00>'
                     if self._check_lora_response(reply):
                         return True
+                    else:
+                        # Response is incorrect, clear the buffer
+                        self.fb.flushInput()
+            else:
+                # Failed to get a $ in reply, clear the buffer
+                self.fb.flushInput()
         return False
 
     def receive(self):
@@ -324,7 +331,8 @@ class LoRaComms:
         packet = b''
         if self._write_to_sp(RECC) > 0:
             # Expect to get 'message\r\nOK00>' where message is the packet of length given
-            reply = self._read_from_sp()        #was (length) in parameters
+            reply = self._read_from_sp(length + 7)        #was (length) in parameters
+            #MB: Added length validation to see if it improves performance
             if self._check_lora_response(reply):
 #                packet = (reply[0:length], 16)
                 packet = reply[0:length]
