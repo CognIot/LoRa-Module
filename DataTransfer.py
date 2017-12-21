@@ -273,6 +273,7 @@ def GetRecord():
 
     gbl_log.info("[CTRL] Getting the list of files to use and selecting one")
     record = ''
+    chosen_record = ''
     list_of_files = os.listdir(path=SS.RECORDFILE_LOCATION+'/.')
     if len(list_of_files) > 0:
         list_of_files.sort()
@@ -289,11 +290,12 @@ def GetRecord():
                     gbl_log.debug("[CTRL] Record loaded for use:%s" % record)
                 if ValidateRecord(record):
                     # The record is good and therefore I need to exit
+                    chosen_record= record_to_use
                     break
                 else:
                     # The file is not valid and therefore is moved to the archive list
                     RenameRecordFile(record_to_use)
-    return (record_to_use, record)
+    return (chosen_record, record)
 
 def RemoveRecordFile(record_to_remove):
     """
@@ -552,7 +554,7 @@ if __name__ == "__main__":
         main()
     
     except:
-        # This won't work as it requires knowledge of the instances
+        #BUG This won't work as it requires knowledge of the instances
         LoRa.exit_hub()
         Hub.exit_comms()
         print("Program Ended...")
