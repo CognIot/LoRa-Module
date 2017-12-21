@@ -259,7 +259,7 @@ def ValidateRecord(contents):
     If the record is good, return True, else return False
     """
     status = True
-    if len(contents) < SS.RECORDFILE_MIN_SIZE: or len(contents) > SS.RECORDFILE_MAX_SIZE:
+    if len(contents) < SS.RECORDFILE_MIN_SIZE or len(contents) > SS.RECORDFILE_MAX_SIZE:
         status = False
     #TODO: Add other checks for validation
     return status
