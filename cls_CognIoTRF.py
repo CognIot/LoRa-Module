@@ -223,7 +223,7 @@ class Hub:
 
     def reply_payload_len(self):
         # The length of the data in the payload
-        return int.from_bytes(self.payload_len, byteorder='big')
+        return self.payload_len
         
     def reply_payload(self):
         # The data that has been sent
@@ -255,7 +255,7 @@ class Hub:
         elif self.src_control != CONTROL_BYTE or self.dest_control != CONTROL_BYTE:
             self.log.info("[HDD]: Message Validation: Incorrect Control Byte")
             return False
-        elif len(self.payload) != int.from_bytes(self.payload_len, byteorder='big'):
+        elif len(self.payload) != self.payload_len:
             self.log.info("[HDD]: Message Validation: Incorrect Payload length byte doesn't match payload length")
             return False
         return True
@@ -267,7 +267,7 @@ class Hub:
         self.src_addr = b''         # The address of the node in the message
         self.src_control = b''      # The Control byte of the node in the message (future use)
         self.command = b''          # The command in the message
-        self.payload_len = b''      # The length byte in the message
+        self.payload_len = 0      # The length byte in the message
         self.payload = b''          # The payload in the message (optional)
                 
         self.response = b''         # The message to be returned
@@ -285,7 +285,7 @@ class Hub:
             self.src_addr = packet[START_SRC_ADDR:SRC_CONTROL_BYTE]
             self.src_control = chr(packet[SRC_CONTROL_BYTE]).encode('utf-8')
             self.command = chr(packet[COMMAND]).encode('utf-8')
-            self.payload_len = chr(packet[PAYLOAD_LEN]).encode('utf-8')
+            self.payload_len = packet[PAYLOAD_LEN]
             if len(packet) > PAYLOAD:
                 # Onlyadd the payload if the length is longer than then minimum length
                 self.payload = packet[PAYLOAD:]
@@ -302,7 +302,7 @@ class Hub:
 
 class Node:
     """
-    Provides the fmethods for the Node operation
+    Provides the methods for the Node operation
 
     Message  Structure
         Bytes  - Meaning
@@ -458,7 +458,7 @@ class Node:
             self.src_addr = packet[START_SRC_ADDR:SRC_CONTROL_BYTE]
             self.src_control = chr(packet[SRC_CONTROL_BYTE]).encode('utf-8')
             self.command = chr(packet[COMMAND]).encode('utf-8')
-            self.payload_len = chr(packet[PAYLOAD_LEN]).encode('utf-8')
+            self.payload_len = packet[PAYLOAD_LEN]
             if len(packet) > PAYLOAD:
                 # Onlyadd the payload if the length is longer than then minimum length
                 self.payload = packet[PAYLOAD:]
@@ -472,15 +472,15 @@ class Node:
         
     def _reset_values(self):
         # These are from the contents of the message, clear them all when processing the message 
-        self.dest_addr = b''         # The address of the hub in the message
-        self.dest_control = b''      # The Control byte of the Hub in the message (future use)
-        self.src_addr = b''        # The address of the node in the message
-        self.src_control = b''     # The Control byte of the node in the message (future use)
-        self.command = b''          # The command in the message
-        self.payload_len = b''      # The length byte in the message
-        self.payload = b''          # The payload in the message (optional)
-        self.data_to_send = b''     # The data to be managed and sent
-        self.response = b''         # The message to be returned
+        self.dest_addr = b''            # The address of the hub in the message
+        self.dest_control = b''         # The Control byte of the Hub in the message (future use)
+        self.src_addr = b''             # The address of the node in the message
+        self.src_control = b''          # The Control byte of the node in the message (future use)
+        self.command = b''              # The command in the message
+        self.payload_len = 0            # The length byte in the message
+        self.payload = b''              # The payload in the message (optional)
+        self.data_to_send = b''         # The data to be managed and sent
+        self.response = b''             # The message to be returned
         self.response_status = False    # The status of the responding message (True = Valid message)
         self.outgoing_message = b''     # The message to be transmitted
 
