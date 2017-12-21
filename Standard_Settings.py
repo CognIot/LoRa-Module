@@ -10,7 +10,7 @@ RECORDFILE_OLD = ".oldrec"          # The extension used when the record can't b
 RECORD_TRY_COUNT = 10               # How many times, when connected the Data Accessor will try and send a record
 EEPROM_READ_RETRY = 5               # How many times it will try and read data from the EEPROM
 RECORDFILE_MIN_SIZE = 1             # The minimum value when len(record) in the recordfile, to cater for '[[]]' empty files
-RECORDFILE_MAX_SIZE = 128           # The maximum value when len(record) in the recordfile
+RECORDFILE_MAX_SIZE = 255           # The maximum value when len(record) in the recordfile
 
 #Comms general values
 REPLY_WAIT = 5                      # How long to wait for a response

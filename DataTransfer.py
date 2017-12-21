@@ -259,7 +259,7 @@ def ValidateRecord(contents):
     If the record is good, return True, else return False
     """
     status = True
-    if len(contents) < SS.RECORDFILE_MIN_SIZE or len(contents) > SS.RECORDFILE_MAX_SIZE:
+    if len(contents) < SS.RECORDFILE_MIN_SIZE: or len(contents) > SS.RECORDFILE_MAX_SIZE:
         status = False
     #TODO: Add other checks for validation
     return status
@@ -315,9 +315,9 @@ def RenameRecordFile(record_to_rename):
     """
     if os.path.isfile(SS.RECORDFILE_LOCATION+'/' + record_to_rename):
         os.rename(SS.RECORDFILE_LOCATION+'/' + record_to_rename, SS.RECORDFILE_LOCATION+'/' + record_to_rename[-3:] + SS.RECORDFILE_OLD)
-        gbl_log.info("[DAcc] Record File renamed:%s" % SS.RECORDFILE_LOCATION+'/' + record_to_rename[-3:] + SS.RECORDFILE_OLD)
+        gbl_log.info("[DAcc] Record File renamed:%s" % SS.RECORDFILE_LOCATION+'/' + record_to_rename[:-3] + SS.RECORDFILE_OLD)
     else:
-        gbl_log.info("[DAcc] Record File NOT renamed:%s" % SS.RECORDFILE_LOCATION+'/' + record_to_rename[-3:] + SS.RECORDFILE_OLD)
+        gbl_log.info("[DAcc] Record File NOT renamed:%s" % SS.RECORDFILE_LOCATION+'/' + record_to_rename[:-3] + SS.RECORDFILE_OLD)
     return
     
 def Node_Loop_old(op_info):
