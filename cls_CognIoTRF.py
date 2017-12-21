@@ -50,7 +50,7 @@ CONTROL_BYTE = chr(0x00).encode('utf-8')
 MIN_LENGTH = 12
 
 # The maximum payload length to be handled
-MAX_PAYLOAD_LEN = 127
+MAX_PAYLOAD_LEN = 255
 
 #TODO: Convert 'utf-8' to a fixed variable
 
