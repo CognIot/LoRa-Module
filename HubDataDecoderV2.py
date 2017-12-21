@@ -83,7 +83,6 @@ class NODE:
         logging.info("[HDD]: Message received for processing:%s" % message)
 #TODO: Need to work through this again and check all covered!! - review other code
 
-
         if self._split_message(message):
             self.time_packet_received = time.time()
             if self._validated():
