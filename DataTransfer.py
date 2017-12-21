@@ -488,7 +488,7 @@ def Node_Loop(op_info):
                     retries = SS.RETRIES
                 else:
                     time.sleep(retries)        # Wait for a period before retrying
-
+                    
             if data_to_send == False:
                 # Only have a delay if there is no data to send
                 # Wait for timeout
