@@ -402,7 +402,7 @@ class Node:
                         self.associated = True
                         self.response_status = True
                     else:
-                        self.log.ingfo("[HDD] Message received not association response for a non assocaited Node")
+                        self.log.info("[HDD] Message received not association response for a non associated Node")
                         self.associated = False
                         self.response_status = False
             else:
