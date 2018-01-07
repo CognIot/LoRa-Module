@@ -471,12 +471,6 @@ def Node_Loop(op_info):
                     # if good, remove the record
                     RemoveRecordFile(record_name)
                     # check for more data
-                record_name, data_record = GetRecord()
-                if len(data_record) > 0:
-                    sender.set_data_to_be_sent(data_record)
-                    data_to_send = True
-                else:
-                    data_to_send = False
             else:
                 # else drop out but increase the retries count.
                 gbl_log.debug("[CTRL] Response status is negative, checking fo retry count")
@@ -488,6 +482,12 @@ def Node_Loop(op_info):
                     retries = SS.RETRIES
                 else:
                     time.sleep(retries)        # Wait for a period before retrying
+            record_name, data_record = GetRecord()
+            if len(data_record) > 0:
+                sender.set_data_to_be_sent(data_record)
+                data_to_send = True
+            else:
+                data_to_send = False
                     
             if data_to_send == False:
                 # Only have a delay if there is no data to send
