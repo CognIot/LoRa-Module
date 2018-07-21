@@ -320,10 +320,7 @@ class LoRaComms:
             # Expect to get 'xx\r\nOK00>' where xx is the length byte
             reply = self._read_from_sp(9)
             if self._check_lora_response(reply):
-                try:
-                    length = int(reply[0:2], 16)
-                except:
-                    length = 0
+                length = int(reply[0:2], 16)
         logging.info("[LCR]: Sent %s, expected message is %s bytes" %(REC_LEN, length))
         return length
 
