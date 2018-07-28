@@ -103,10 +103,10 @@ class LoRaComms:
                         return True
                     else:
                         # Response is incorrect, clear the buffer
-                        self.fb.flushInput()
+                        self.fd.flushInput()
             else:
                 # Failed to get a $ in reply, clear the buffer
-                self.fb.flushInput()
+                self.fd.flushInput()
         return False
 
     def receive(self):
